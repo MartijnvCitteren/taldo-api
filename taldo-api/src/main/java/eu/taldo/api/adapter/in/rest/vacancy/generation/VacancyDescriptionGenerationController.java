@@ -1,5 +1,6 @@
 package eu.taldo.api.adapter.in.rest.vacancy.generation;
 
+import eu.taldo.api.adapter.in.rest.AuthenticatedUser;
 import eu.taldo.api.adapter.in.rest.vacancy.generation.mapper.request.GenerateVacancyDescriptionRequestMapper;
 import eu.taldo.api.adapter.in.rest.vacancy.generation.mapper.response.VacancyDescriptionGenerationResponseMapper;
 import eu.taldo.api.adapter.in.rest.vacancy.generation.validation.GenerateVacancyDescriptionRequestValidator;
@@ -32,7 +33,9 @@ public class VacancyDescriptionGenerationController implements GenerationApi {
   public ResponseEntity<VacancyDescriptionGeneration> generateVacancyDescription(
       UUID id, GenerateVacancyDescriptionRequest generateVacancyDescriptionRequest) {
     requestValidator.validate(generateVacancyDescriptionRequest);
-    var command = requestMapper.toCommand(id, generateVacancyDescriptionRequest);
+    var command =
+        requestMapper.toCommand(
+            AuthenticatedUser.actingUser().companyId(), id, generateVacancyDescriptionRequest);
     var pendingGeneration = startGenerationUseCase.start(command);
     var pollLocation =
         ServletUriComponentsBuilder.fromCurrentRequest()
@@ -47,7 +50,8 @@ public class VacancyDescriptionGenerationController implements GenerationApi {
   @Override
   public ResponseEntity<VacancyDescriptionGeneration> getVacancyDescriptionGeneration(
       UUID id, UUID generationId) {
-    var generation = getGenerationUseCase.get(id, generationId);
+    var generation =
+        getGenerationUseCase.get(AuthenticatedUser.actingUser().companyId(), id, generationId);
     return ResponseEntity.ok(responseMapper.toResponse(generation));
   }
 }

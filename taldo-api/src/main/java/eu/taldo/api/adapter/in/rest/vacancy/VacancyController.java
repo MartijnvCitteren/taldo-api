@@ -1,5 +1,6 @@
 package eu.taldo.api.adapter.in.rest.vacancy;
 
+import eu.taldo.api.adapter.in.rest.AuthenticatedUser;
 import eu.taldo.api.adapter.in.rest.EndpointNotImplementedException;
 import eu.taldo.api.adapter.in.rest.vacancy.mapper.request.VacancyCoreRequestMapper;
 import eu.taldo.api.adapter.in.rest.vacancy.mapper.request.VacancyDescriptionRequestMapper;
@@ -56,7 +57,8 @@ public class VacancyController implements VacancyApi {
   @Override
   public ResponseEntity<VacancyResponse> createVacancy(VacancyCoreRequest vacancyCoreRequest) {
     log.info("Received creation request: {}", vacancyCoreRequest);
-    var createCoreVacancyCommand = coreRequestMapper.toCommand(vacancyCoreRequest);
+    var createCoreVacancyCommand =
+        coreRequestMapper.toCommand(AuthenticatedUser.actingUser().companyId(), vacancyCoreRequest);
     var coreVacancy = createVacancyUseCase.createCoreVacancy(createCoreVacancyCommand);
     var response = responseMapper.toVacancyResponse(coreVacancy);
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -93,7 +95,9 @@ public class VacancyController implements VacancyApi {
   public ResponseEntity<VacancyDescriptionResponse> manualVacancyDescription(
       UUID id, VacancyDescriptionRequest vacancyDescriptionRequest) {
     descriptionContentValidator.validate(vacancyDescriptionRequest);
-    var command = descriptionRequestMapper.toCommand(id, vacancyDescriptionRequest);
+    var command =
+        descriptionRequestMapper.toCommand(
+            AuthenticatedUser.actingUser().companyId(), id, vacancyDescriptionRequest);
     var vacancy = manualVacancyDescriptionUseCase.setManualDescription(command);
     var response = descriptionResponseMapper.toResponse(vacancy.getDescription());
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -109,7 +113,9 @@ public class VacancyController implements VacancyApi {
   public ResponseEntity<VacancyResponse> updateVacancy(
       UUID id, VacancyUpdateRequest vacancyUpdateRequest) {
     updateRequestValidator.validate(vacancyUpdateRequest);
-    var command = updateRequestMapper.toCommand(id, vacancyUpdateRequest);
+    var command =
+        updateRequestMapper.toCommand(
+            AuthenticatedUser.actingUser().companyId(), id, vacancyUpdateRequest);
     var vacancy = updateVacancyUseCase.updateVacancy(command);
     return ResponseEntity.ok(responseMapper.toVacancyResponse(vacancy));
   }

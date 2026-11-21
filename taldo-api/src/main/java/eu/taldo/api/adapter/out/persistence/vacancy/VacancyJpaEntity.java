@@ -1,6 +1,7 @@
 package eu.taldo.api.adapter.out.persistence.vacancy;
 
 import eu.taldo.api.adapter.out.persistence.BaseJpaEntity;
+import eu.taldo.api.adapter.out.persistence.identity.CompanyJpaEntity;
 import eu.taldo.api.domain.vacancy.valueobject.HoursPerWeek;
 import eu.taldo.api.domain.vacancy.valueobject.Language;
 import eu.taldo.api.domain.vacancy.valueobject.Location;
@@ -16,8 +17,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.util.UUID;
 import lombok.Getter;
@@ -33,12 +39,25 @@ import org.hibernate.annotations.ColumnDefault;
  * <p>The contact person is four flat columns rather than an embeddable: its name, phone number and
  * e-mail address are personal data and its role is not, and anonymization needs that split per
  * column.
+ *
+ * <p>A vacancy belongs to one company: {@code company_id} is a foreign key to {@code company},
+ * mapped as a lazy {@code @ManyToOne} so the database guards the relation, with an index because
+ * every query filters on it. The domain references the company by id only, because company and
+ * vacancy are separate aggregates.
  */
 @Getter
 @Setter
 @Entity
+@Table(indexes = {@Index(name = "ix_vacancy_company_id", columnList = "company_id")})
 public class VacancyJpaEntity extends BaseJpaEntity {
   @Id private UUID id;
+
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(
+      name = "company_id",
+      nullable = false,
+      foreignKey = @ForeignKey(name = "fk_vacancy_company"))
+  private CompanyJpaEntity company;
 
   /**
    * Optimistic lock. Not null with a default of 0, so Hibernate's schema update can add the column

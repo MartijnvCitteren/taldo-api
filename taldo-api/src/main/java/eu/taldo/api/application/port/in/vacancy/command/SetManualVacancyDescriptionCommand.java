@@ -5,6 +5,7 @@ import lombok.Builder;
 
 @Builder
 public record SetManualVacancyDescriptionCommand(
+    UUID companyId,
     UUID vacancyId,
     String summary,
     String jobDescription,

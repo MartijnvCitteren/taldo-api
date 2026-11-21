@@ -15,5 +15,13 @@ public interface VacancyRepository {
    */
   void save(Vacancy vacancy);
 
-  Optional<Vacancy> findById(UUID id);
+  /**
+   * Finds a vacancy of a company. A vacancy of another company is not found, the same as one that
+   * does not exist, so its existence is never revealed (ADR 0006, revision 2026-11-21, point 4).
+   * There is deliberately no finder by id alone.
+   */
+  Optional<Vacancy> findByIdAndCompanyId(UUID id, UUID companyId);
+
+  /** Whether a vacancy exists for the company; cheaper than loading it for a frequent check. */
+  boolean existsByIdAndCompanyId(UUID id, UUID companyId);
 }

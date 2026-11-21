@@ -10,6 +10,7 @@ import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyCategory;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyCoreRequest;
 import eu.taldo.api.vacancy.adapter.in.web.contract.WorkplaceType;
 import java.math.BigDecimal;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,7 +51,11 @@ class VacancyCoreRequestMapperTest {
             .hoursPerWeek(new HoursPerWeek(BigDecimal.valueOf(32), BigDecimal.valueOf(40)))
             .build();
 
-    CreateCoreVacancyCommand result = mapper.toCommand(request);
+    var companyId = UUID.randomUUID();
+
+    CreateCoreVacancyCommand result = mapper.toCommand(companyId, request);
+
+    assertEquals(companyId, result.companyId());
 
     assertEquals(expected.jobTitle(), result.jobTitle());
     assertEquals(expected.language(), result.language());

@@ -50,4 +50,16 @@ class CreateVacancyServiceTest {
 
     assertEquals(LocalDateTime.of(2026, 1, 1, 9, 0), vacancy.getCreatedAt());
   }
+
+  @Test
+  @DisplayName(
+      "given a command for a company, when create core vacancy then the vacancy belongs to that"
+          + " company")
+  void givenCommandForCompanyWhenCreateCoreVacancyThenVacancyBelongsToThatCompany() {
+    CreateCoreVacancyCommand command = getFilledCreateCoreVacancyCommand().build();
+
+    Vacancy vacancy = createVacancyService.createCoreVacancy(command);
+
+    assertEquals(command.companyId(), vacancy.getCompanyId());
+  }
 }

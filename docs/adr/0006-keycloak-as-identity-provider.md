@@ -471,3 +471,14 @@ configured as `taldo-web` (lightweight access token, the `sub` and audience mapp
   name, e-mail address or `preferred_username`. The ID token still held `name`, `given_name`, `family_name`,
   `email` and `preferred_username`.
 - The token response had `expires_in` 600 and `refresh_expires_in` 86400.
+
+Checked on 2026-11-21 with the whole series (up to company scoping) running against that Keycloak realm and a fresh
+PostgreSQL 17 database, with access tokens from Keycloak's token endpoint:
+
+- `GET /me` before the account had a Taldo user answered `ONBOARDING_REQUIRED`, and `POST /vacancy` `403`. With an
+  active user, `GET /me` answered `ACTIVE` with the profile and the company name.
+- A vacancy created by a user of company A was stored with A's `company_id` (foreign key `fk_vacancy_company`
+  present); a user of company B got `404` changing it, a user of A `200`.
+- `401` with `Bearer error="invalid_token"` for: a token whose payload was changed (another `sub`), a token with a
+  changed signature byte, a token of another realm, and a token of another client in the same realm (no `aud`). No
+  token: `401` with `Bearer`.

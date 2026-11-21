@@ -38,7 +38,7 @@ public class StartVacancyDescriptionGenerationService
   @Override
   @Transactional
   public VacancyDescriptionGeneration start(StartVacancyDescriptionGenerationCommand command) {
-    var vacancy = getVacancy(command.vacancyId());
+    var vacancy = getVacancy(command.vacancyId(), command.companyId());
     var pendingGeneration =
         VacancyDescriptionGeneration.newPending(
             vacancy.getId(), toGenerationInput(vacancy, command), LocalDateTime.now(clock));
@@ -50,9 +50,9 @@ public class StartVacancyDescriptionGenerationService
     return pendingGeneration;
   }
 
-  private Vacancy getVacancy(UUID vacancyId) {
+  private Vacancy getVacancy(UUID vacancyId, UUID companyId) {
     return vacancyRepository
-        .findById(vacancyId)
+        .findByIdAndCompanyId(vacancyId, companyId)
         .orElseThrow(() -> new VacancyNotFoundException(vacancyId));
   }
 

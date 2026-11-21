@@ -1,14 +1,14 @@
 package eu.taldo.api.integration.security;
 
-import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
 import static eu.taldo.api.testSupport.KeycloakStub.accessToken;
+import static eu.taldo.api.testSupport.SeededAccounts.asAcmeOwner;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import eu.taldo.api.integration.BaseIntegrationTest;
 import eu.taldo.api.shared.Constants;
-import eu.taldo.api.testSupport.AcmeAccounts;
+import eu.taldo.api.testSupport.SeededAccounts;
 import io.restassured.http.ContentType;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +24,7 @@ import org.springframework.test.context.jdbc.Sql;
  * revision 2026-11-21, point 5). Taldo decides that from its own user, not from the token: a valid
  * token of an account that has not onboarded, or whose user waits for approval, gets {@code 403}.
  */
-@Sql(AcmeAccounts.SEED)
+@Sql(SeededAccounts.SEED)
 class CompanyAccessIntegrationTest extends BaseIntegrationTest {
   private static final String NOT_ONBOARDED_SUBJECT = "6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b";
   private static final String VALID_VACANCY_REQUEST =
@@ -64,7 +64,7 @@ class CompanyAccessIntegrationTest extends BaseIntegrationTest {
   private static Stream<Arguments> accountsWithoutCompanyAccess() {
     return Stream.of(
         arguments("not onboarded", NOT_ONBOARDED_SUBJECT),
-        arguments("waiting for approval", AcmeAccounts.PENDING_MEMBER_SUBJECT));
+        arguments("waiting for approval", SeededAccounts.PENDING_MEMBER_SUBJECT));
   }
 
   @Test

@@ -27,9 +27,10 @@ import org.mapstruct.ReportingPolicy;
     unmappedTargetPolicy = ReportingPolicy.WARN)
 public interface VacancyUpdateRequestMapper {
 
+  @Mapping(target = "companyId", source = "companyId")
   @Mapping(target = "vacancyId", source = "id")
   @Mapping(target = "hoursPerWeek", source = "request")
-  UpdateVacancyCommand toCommand(UUID id, VacancyUpdateRequest request);
+  UpdateVacancyCommand toCommand(UUID companyId, UUID id, VacancyUpdateRequest request);
 
   /** Text the user sent is a {@code MANUAL} description, also when it started as an AI draft. */
   @Mapping(target = "source", constant = "MANUAL")

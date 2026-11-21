@@ -22,6 +22,7 @@ public class CreateVacancyService implements CreateVacancyUseCase {
   public Vacancy createCoreVacancy(CreateCoreVacancyCommand command) {
     var vacancy =
         Vacancy.builder()
+            .companyId(command.companyId())
             .jobTitle(command.jobTitle())
             .language(command.language())
             .location(command.location())

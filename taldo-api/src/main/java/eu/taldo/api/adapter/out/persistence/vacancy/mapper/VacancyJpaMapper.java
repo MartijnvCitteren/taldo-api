@@ -22,12 +22,13 @@ import org.mapstruct.ReportingPolicy;
     unmappedTargetPolicy = ReportingPolicy.WARN)
 public interface VacancyJpaMapper {
   /**
-   * Map a domain entity to a JPA entity. The cascade relation to description (if present) is wired
-   * by the adapter before saving.
+   * Map a domain entity to a JPA entity. The cascade relation to description (if present) and the
+   * company reference are wired by the adapter before saving.
    *
    * @param vacancy the domain entity
    * @return the JPA entity
    */
+  @Mapping(target = "company", ignore = true)
   @Mapping(target = "contactPersonName", source = "contactPerson.name")
   @Mapping(target = "contactPersonRole", source = "contactPerson.role")
   @Mapping(target = "contactPersonPhone", source = "contactPerson.phone.value")
@@ -40,6 +41,7 @@ public interface VacancyJpaMapper {
    * @param vacancyEntity the persisted entity
    * @return the domain entity
    */
+  @Mapping(target = "companyId", source = "company.id")
   @Mapping(target = "contactPerson", source = ".")
   Vacancy toDomain(VacancyJpaEntity vacancyEntity);
 

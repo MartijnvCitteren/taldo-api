@@ -13,7 +13,8 @@ import org.mapstruct.ReportingPolicy;
     unmappedTargetPolicy = ReportingPolicy.WARN)
 public interface GenerateVacancyDescriptionRequestMapper {
 
+  @Mapping(target = "companyId", source = "companyId")
   @Mapping(target = "vacancyId", source = "id")
   StartVacancyDescriptionGenerationCommand toCommand(
-      UUID id, GenerateVacancyDescriptionRequest request);
+      UUID companyId, UUID id, GenerateVacancyDescriptionRequest request);
 }

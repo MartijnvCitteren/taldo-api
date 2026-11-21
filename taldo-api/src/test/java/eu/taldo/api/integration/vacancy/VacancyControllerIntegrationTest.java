@@ -1,7 +1,7 @@
 package eu.taldo.api.integration.vacancy;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
+import static eu.taldo.api.testSupport.SeededAccounts.asAcmeOwner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -10,7 +10,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import eu.taldo.api.adapter.out.persistence.vacancy.VacancyJpaRepository;
 import eu.taldo.api.integration.BaseIntegrationTest;
-import eu.taldo.api.testSupport.AcmeAccounts;
+import eu.taldo.api.testSupport.SeededAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.Language;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetailsErrorsInner;
@@ -37,7 +37,7 @@ import org.springframework.test.context.jdbc.Sql;
 /**
  * Runs against an in-memory H2 database so the vacancy is persisted through the real JPA adapter.
  */
-@Sql(AcmeAccounts.SEED)
+@Sql(SeededAccounts.SEED)
 class VacancyControllerIntegrationTest extends BaseIntegrationTest {
 
   private static final String PROBLEM_JSON = "application/problem+json";

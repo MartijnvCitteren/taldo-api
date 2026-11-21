@@ -27,8 +27,11 @@ class VacancyDescriptionRequestMapperTest {
             .whatWeOffer("What we offer")
             .aboutUs("About us");
 
-    var result = mapper.toCommand(id, request);
+    var companyId = UUID.randomUUID();
 
+    var result = mapper.toCommand(companyId, id, request);
+
+    assertEquals(companyId, result.companyId());
     assertEquals(id, result.vacancyId());
     assertEquals(request.getSummary(), result.summary());
     assertEquals(request.getJobDescription(), result.jobDescription());

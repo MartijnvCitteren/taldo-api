@@ -20,6 +20,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class VacancyUpdateRequestMapperTest {
+  private static final UUID COMPANY_ID = UUID.randomUUID();
 
   private final VacancyUpdateRequestMapper mapper =
       new VacancyUpdateRequestMapperImpl(
@@ -46,7 +47,8 @@ class VacancyUpdateRequestMapperTest {
             .numberOfHolidays(new BigDecimal("26"));
 
     var command =
-        mapper.toCommand(id, new VacancyUpdateRequest().contactPerson(contactPerson).offer(offer));
+        mapper.toCommand(
+            COMPANY_ID, id, new VacancyUpdateRequest().contactPerson(contactPerson).offer(offer));
 
     assertEquals(id, command.vacancyId());
     assertEquals(contactPerson.getName(), command.contactPerson().name());
@@ -71,7 +73,7 @@ class VacancyUpdateRequestMapperTest {
             .contactPerson(new ContactPerson("Sanne de Vries", "sanne@acme.nl"))
             .offer(new Offer().numberOfHolidays(new BigDecimal("25")));
 
-    var command = mapper.toCommand(UUID.randomUUID(), request);
+    var command = mapper.toCommand(COMPANY_ID, UUID.randomUUID(), request);
 
     assertNull(command.contactPerson().phone());
     assertNull(command.offer().currency());
@@ -97,8 +99,9 @@ class VacancyUpdateRequestMapperTest {
             .contactPerson(new ContactPerson("Sanne de Vries", "sanne@acme.nl"))
             .offer(new Offer().numberOfHolidays(new BigDecimal("25")));
 
-    var command = mapper.toCommand(id, request);
+    var command = mapper.toCommand(COMPANY_ID, id, request);
 
+    assertEquals(COMPANY_ID, command.companyId());
     assertEquals(id, command.vacancyId());
     assertEquals(request.getJobTitle(), command.jobTitle());
     assertEquals(request.getLanguage().getValue(), command.language().name());
@@ -118,7 +121,7 @@ class VacancyUpdateRequestMapperTest {
   @Test
   @DisplayName("given an empty update request, when toCommand then every part is null")
   void givenEmptyUpdateRequestWhenToCommandThenEveryPartIsNull() {
-    var command = mapper.toCommand(UUID.randomUUID(), new VacancyUpdateRequest());
+    var command = mapper.toCommand(COMPANY_ID, UUID.randomUUID(), new VacancyUpdateRequest());
 
     assertNull(command.jobTitle());
     assertNull(command.language());

@@ -1,12 +1,13 @@
 package eu.taldo.api.integration.vacancy;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
+import static eu.taldo.api.testSupport.SeededAccounts.asAcmeOwner;
+import static eu.taldo.api.testSupport.SeededAccounts.asInitechOwner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import eu.taldo.api.integration.BaseIntegrationTest;
-import eu.taldo.api.testSupport.AcmeAccounts;
+import eu.taldo.api.testSupport.SeededAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.CurrencyCode;
 import eu.taldo.api.vacancy.adapter.in.web.contract.Language;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
@@ -27,7 +28,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.jdbc.Sql;
 
 /** Partially updating a vacancy ({@code PATCH /vacancy/{id}}). */
-@Sql({AcmeAccounts.SEED, "/sql/existing-vacancy.sql"})
+@Sql({SeededAccounts.SEED, "/sql/existing-vacancy.sql"})
 class VacancyUpdateIntegrationTest extends BaseIntegrationTest {
 
   /** Seeded by {@code sql/existing-vacancy.sql}: Sales Manager in Amsterdam, NL, 32-40 hours. */
@@ -274,6 +275,24 @@ class VacancyUpdateIntegrationTest extends BaseIntegrationTest {
             "{\"offer\": {\"salaryMin\": 4600.01, \"salaryMax\": 4600, \"currency\": \"EUR\","
                 + " \"salaryPeriod\": \"MONTHLY\"}}"),
         Arguments.of("offer.numberOfHolidays", "{\"offer\": {\"numberOfHolidays\": 61}}"));
+  }
+
+  @Test
+  @DisplayName(
+      "given a vacancy of another company, when updated then 404 and the vacancy stays as it was")
+  void givenVacancyOfAnotherCompanyWhenUpdatedThen404AndVacancyStaysAsItWas() {
+    asInitechOwner()
+        .contentType(ContentType.JSON)
+        .body("{\"jobTitle\": \"Chef\"}")
+        .when()
+        .patch("/vacancy/{id}", VACANCY_ID)
+        .then()
+        .statusCode(HttpStatus.NOT_FOUND.value())
+        .contentType(PROBLEM_JSON);
+
+    var vacancy = patch(VACANCY_ID, "{}");
+
+    assertEquals("Sales Manager", vacancy.getJobTitle());
   }
 
   private static VacancyResponse patch(UUID vacancyId, String body) {

@@ -23,7 +23,7 @@ public class SetManualVacancyDescriptionService implements ManualVacancyDescript
   public Vacancy setManualDescription(SetManualVacancyDescriptionCommand command) {
     Vacancy vacancy =
         vacancyRepository
-            .findById(command.vacancyId())
+            .findByIdAndCompanyId(command.vacancyId(), command.companyId())
             .orElseThrow(() -> new VacancyNotFoundException(command.vacancyId()));
 
     vacancy.setDescription(

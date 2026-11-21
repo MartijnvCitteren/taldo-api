@@ -16,8 +16,10 @@ import eu.taldo.api.domain.vacancy.valueobject.WorkplaceType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Currency;
+import java.util.UUID;
 
 public class VacancyFactory {
+  public static final UUID COMPANY_ID = UUID.fromString("0199c9a0-0000-7000-8000-00000000a001");
   public static final String JOB_TITLE = "Sales Manager";
   public static final Language LANGUAGE = Language.NL;
   public static final VacancyCategory CATEGORY = VacancyCategory.SALES;
@@ -44,6 +46,7 @@ public class VacancyFactory {
 
   public static Vacancy.Builder getFilledCoreVacancy() {
     return Vacancy.builder()
+        .companyId(COMPANY_ID)
         .jobTitle(JOB_TITLE)
         .language(LANGUAGE)
         .category(CATEGORY)
@@ -57,6 +60,7 @@ public class VacancyFactory {
   public static CreateCoreVacancyCommand.CreateCoreVacancyCommandBuilder
       getFilledCreateCoreVacancyCommand() {
     return CreateCoreVacancyCommand.builder()
+        .companyId(COMPANY_ID)
         .jobTitle(JOB_TITLE)
         .language(LANGUAGE)
         .category(CATEGORY)

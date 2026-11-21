@@ -14,12 +14,12 @@ public interface GetVacancyDescriptionGenerationUseCase {
    * failed, or is {@code PENDING} past its deadline, is reported as the exception for its failure.
    *
    * @throws VacancyDescriptionGenerationNotFoundException if the generation does not exist for this
-   *     vacancy
+   *     vacancy, or the vacancy does not belong to the company
    * @throws VacancyDescriptionGenerationRejectedException if the model rejected the input
    * @throws VacancyDescriptionGenerationUnavailableException if the AI provider refused the request
    *     in a way a retry does not fix
    * @throws VacancyDescriptionGenerationFailedException for every other failure, including the
    *     timeout
    */
-  VacancyDescriptionGeneration get(UUID vacancyId, UUID generationId);
+  VacancyDescriptionGeneration get(UUID companyId, UUID vacancyId, UUID generationId);
 }
