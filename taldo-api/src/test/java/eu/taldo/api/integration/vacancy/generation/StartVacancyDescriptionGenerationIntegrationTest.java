@@ -13,15 +13,16 @@ import static eu.taldo.api.integration.vacancy.generation.GenerationIntegrationC
 import static eu.taldo.api.integration.vacancy.generation.GenerationIntegrationCommons.TEAM;
 import static eu.taldo.api.integration.vacancy.generation.GenerationIntegrationCommons.VALID_REQUEST;
 import static eu.taldo.api.integration.vacancy.generation.GenerationIntegrationCommons.WHY_NICE_JOB;
+import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
 import static eu.taldo.api.testSupport.MistralStub.COMPLETIONS;
 import static eu.taldo.api.testSupport.MistralStub.MISTRAL_WIREMOCK;
 import static eu.taldo.api.testSupport.MistralStub.draftCompletion;
-import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import eu.taldo.api.integration.BaseIntegrationTest;
+import eu.taldo.api.testSupport.AcmeAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyDescriptionGeneration;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyDescriptionGenerationStatus;
@@ -42,7 +43,7 @@ import org.springframework.test.context.jdbc.Sql;
  * the API. Mistral is the only thing replaced (WireMock); the request it receives is the observable
  * effect of a start.
  */
-@Sql(SEED_SCRIPT)
+@Sql({AcmeAccounts.SEED, SEED_SCRIPT})
 class StartVacancyDescriptionGenerationIntegrationTest extends BaseIntegrationTest {
 
   @BeforeEach
@@ -57,7 +58,7 @@ class StartVacancyDescriptionGenerationIntegrationTest extends BaseIntegrationTe
           + " pending generation and its poll location")
   void givenExistingVacancyAndValidAnswersWhenStartedThen202WithPendingGenerationAndLocation() {
     var response =
-        given()
+        asAcmeOwner()
             .contentType(ContentType.JSON)
             .body(VALID_REQUEST)
             .when()
@@ -98,7 +99,7 @@ class StartVacancyDescriptionGenerationIntegrationTest extends BaseIntegrationTe
   @Test
   @DisplayName("given an unknown vacancy, when a generation is started then 404 and Mistral unused")
   void givenUnknownVacancyWhenStartedThen404AndMistralUnused() {
-    given()
+    asAcmeOwner()
         .contentType(ContentType.JSON)
         .body(VALID_REQUEST)
         .when()
@@ -118,7 +119,7 @@ class StartVacancyDescriptionGenerationIntegrationTest extends BaseIntegrationTe
   void givenInvalidAnswerWhenStartedThen400NamingTheFieldAndMistralUnused(
       String violation, String expectedField, String requestBody) {
     var response =
-        given()
+        asAcmeOwner()
             .contentType(ContentType.JSON)
             .body(requestBody)
             .when()

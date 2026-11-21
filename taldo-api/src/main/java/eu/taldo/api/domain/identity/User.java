@@ -102,6 +102,14 @@ public class User extends BaseObject {
     setLastModifiedAt(changedAt);
   }
 
+  /**
+   * Whether the user may read and change their company's data. Only an active user may: a member
+   * who waits for the owner's approval cannot see the company yet (ADR 0006, section 2).
+   */
+  public boolean mayAccessCompanyData() {
+    return status == UserStatus.ACTIVE;
+  }
+
   /** Whether the user is an owner who is not a member of the organization yet. */
   public boolean needsOrganizationMembership() {
     return membership == Membership.OWNER && !organizationMember;

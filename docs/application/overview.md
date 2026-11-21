@@ -23,7 +23,7 @@ A request passes through the hexagon in one direction; each arrow is an explicit
 does not belong to.
 
 ```
-HTTP ─▶ Security filter chain (uses a valid bearer token, ignores an invalid one; only /onboarding and /me require one)
+HTTP ─▶ Security filter chain (valid bearer token required; company endpoints also need an active Taldo user)
           ▼
         Controller (implements generated *Api interface)
           │  1. bean validation on the generated contract model (@Valid from the spec)
@@ -95,11 +95,15 @@ The response goes back up the same way: domain object ─▶ response mapper ─
   mapping at all.
 - **Security**: one `SecurityFilterChain` (`SecurityConfig`). The backend is an OAuth2 resource server for Keycloak's
   access tokens (ADR 0006): signature, issuer, expiry and audience (`taldo-api`) are checked with the realm's public
-  keys, fetched on the first request and cached. A token issued for another audience is treated like a forged one. Security is relaxed for now: only `/onboarding` and `/me` require a token, because they
-  act on the account in it. The vacancy endpoints are open although their contract declares bearer auth; #103 secures
-  them. An expired, forged or malformed token is ignored (`LenientBearerTokenResolver`, logged at `warn`) instead of
-  answered with `401`, so a stale token in a client does not block open endpoints; on `/onboarding` and `/me` it gets
-  the same `401` as no token. A valid token is decoded twice per request (resolver and provider), both locally. CSRF,
+  keys, fetched on the first request and cached. A token issued for another audience is treated like a forged one.
+  Every endpoint requires a valid token (ADR 0006, revision 2026-11-21): no token or an invalid one is `401`.
+  `AccountAuthenticationConverter` (`adapter/in/rest`) looks up the token's `sub` in `app_user` on every request
+  (`FindActingUserUseCase`, one indexed lookup) and grants the authority `COMPANY_ACCESS` only to an `ACTIVE` user.
+  `/onboarding` and `/me` need just the token; every other path needs `COMPANY_ACCESS`, so a new endpoint is closed to
+  accounts without company access by default, and such an account gets `403`. Rights never come from the token: the
+  realm's roles are not read. `401` and `403` are problem responses with fixed texts, written in the filter chain
+  (`BearerChallengeEntryPoint`, `CompanyAccessDeniedHandler`). Error dispatches are permitted, so a request that fails
+  before a controller keeps its `500`. CSRF,
   form login, HTTP basic and logout are disabled, sessions are stateless, and CORS defers to `WebConfig`. Spring
   Security adds its default response headers (e.g. `X-Content-Type-Options: nosniff`).
   `SecurityConfig` only loads in a servlet web application, so a test that starts the context without a web
@@ -149,6 +153,7 @@ Open issues an agent should know about before building on top of them. Remove an
 
 - Javadoc and code comments refer to ADR 0004 and ADR 0005, which are not in `docs/adr/`.
 - `BaseJpaEntity.lastModifiedBy` (an `app_user` id) is filled only for companies, by onboarding. For vacancies it
-  stays empty: there is no `AuditorAware`, because the vacancy endpoints are not authenticated yet (#103).
+  stays empty: there is no `AuditorAware` yet; the acting user is known on every company endpoint, but not wired into
+  auditing (#103).
 - Tests run on H2, not PostgreSQL: behaviour only PostgreSQL has (e.g. several `NULL`s in a unique column) is not
   tested. Testcontainers is a deferred guardrail (ADR 0001).

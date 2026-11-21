@@ -29,6 +29,22 @@ class UserTest {
   }
 
   @Test
+  @DisplayName("given an active owner, when asked for company access then granted")
+  void givenActiveOwnerWhenAskedForCompanyAccessThenGranted() {
+    var user = IdentityFactory.owner(COMPANY_ID);
+
+    assertTrue(user.mayAccessCompanyData());
+  }
+
+  @Test
+  @DisplayName("given a member pending approval, when asked for company access then refused")
+  void givenMemberPendingApprovalWhenAskedForCompanyAccessThenRefused() {
+    var user = IdentityFactory.member(COMPANY_ID);
+
+    assertFalse(user.mayAccessCompanyData());
+  }
+
+  @Test
   @DisplayName(
       "given an existing company, when a user is created then they become a member pending"
           + " approval")

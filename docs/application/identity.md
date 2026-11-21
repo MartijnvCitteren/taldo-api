@@ -5,8 +5,8 @@ its own `company` and `app_user` and everything that decides access to company d
 
 This page covers what is built today: onboarding a logged-in Keycloak account (`POST /onboarding`), the domain
 model, its persistence and the Keycloak adapter. The backend's own registration flow (ADR 0003) has been removed.
-Users change their names with `PATCH /me`. `GET /me`, owner approval and securing the other endpoints do not exist
-yet.
+Users change their names with `PATCH /me`. Every endpoint requires an access token, and company endpoints also an
+active Taldo user (see "REST adapter and security"). `GET /me` and owner approval do not exist yet.
 
 ## Domain model
 
@@ -114,14 +114,20 @@ file differ. Onboarding checks it again through the `PublicEmailDomains` port, i
   only to an account with a verified address at that domain.
 - The backend is an OAuth2 resource server (`spring-boot-starter-security-oauth2-resource-server`, `issuer-uri` and
   `audiences`). It checks signature, issuer, expiry and audience with Keycloak's public keys, fetched on the first
-  request and cached, so no call to Keycloak per request. `SecurityConfig` requires a token for `/onboarding` and `/me` only. An expired, forged
-  or malformed token is ignored (`LenientBearerTokenResolver`, see `overview.md`), so on these endpoints it is the same
-  as no token: `401` with an empty body and only the RFC 6750 challenge `WWW-Authenticate: Bearer`. Spring's default
-  `error_description` (why the token was rejected) and `resource_metadata` link are left out
-  (`BearerChallengeEntryPoint`). Its `error="invalid_token"` branch is unreachable while invalid tokens are ignored.
+  request and cached, so no call to Keycloak per request. Every endpoint requires a token; `/onboarding` and `/me`
+  need nothing more, so they work before onboarding and while a user waits for approval. No token is `401` with
+  `WWW-Authenticate: Bearer`, an expired, forged, malformed or wrong-audience token `401` with `Bearer
+  error="invalid_token"`; both with a problem body of fixed texts. Spring's default `error_description` (why the
+  token was rejected) and `resource_metadata` link are left out (`BearerChallengeEntryPoint`).
+- **Company access** (ADR 0006, revision 2026-11-21, points 1 and 5): `AccountAuthenticationConverter` resolves the
+  token's `sub` to the acting user (`FindActingUserService`: user id and company id) when the user may access company
+  data (`User.mayAccessCompanyData`: status `ACTIVE`), and grants `COMPANY_ACCESS`. An account without a Taldo user or
+  with a `PENDING_APPROVAL` user is authenticated without it and gets `403` (`CompanyAccessDeniedHandler`) on every
+  company endpoint. Because the lookup runs per request, approving or blocking a user takes effect on their next
+  request. A token without `sub` is `401`.
 - Authentication failures are logged with method and path, never the token, other headers, the query string or the
-  client's address: no token at `info`, an ignored token at `warn` with the reason, anything unexpected at `error`
-  with its stack trace. When Keycloak is unreachable while the keys are fetched, Spring Security rethrows the failure:
+  client's address: no token at `info`, a rejected token at `warn` with the reason, a refused company access at
+  `info`, anything unexpected at `error` with its stack trace. When Keycloak is unreachable while the keys are fetched, Spring Security rethrows the failure:
   Tomcat logs it at `error` with the cause (e.g. `503` on `.../certs`) and the client gets a bare `500`.
 
 ## Access token
@@ -207,8 +213,6 @@ The execution differs from the vacancy one in two ways:
 - When Keycloak is unreachable on the first request with a token, the resource server cannot fetch the issuer's
   configuration and answers `500` with Spring's default error body instead of a `503` problem. Once the keys are
   cached, a Keycloak outage only affects calls to the Admin API.
-- A `401` has an empty body here, while `VacancyApi.yml` declares a problem body for its `401`. Align both when #103
-  secures the vacancy endpoints.
 - An account that is deleted and created again in Keycloak with the same address gets a new `sub`; onboarding then
   hits the unique `email` and answers `500`.
 - There is no optimistic locking (`@Version`) on `company` or `app_user`.

@@ -1,7 +1,7 @@
 package eu.taldo.api.integration.vacancy;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static io.restassured.RestAssured.given;
+import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,6 +9,7 @@ import eu.taldo.api.adapter.out.persistence.vacancy.VacancyDescriptionJpaReposit
 import eu.taldo.api.adapter.out.persistence.vacancy.VacancyJpaRepository;
 import eu.taldo.api.domain.vacancy.valueobject.VacancyDescriptionSource;
 import eu.taldo.api.integration.BaseIntegrationTest;
+import eu.taldo.api.testSupport.AcmeAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyDescriptionResponse;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyResponse;
@@ -19,11 +20,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.jdbc.Sql;
 
 /**
  * Runs against an in-memory H2 database, exercising {@code POST /vacancy/{id}/description}
  * end-to-end through the real REST, application and persistence layers.
  */
+@Sql(AcmeAccounts.SEED)
 class VacancyManualDescriptionIntegrationTest extends BaseIntegrationTest {
 
   private static final String PROBLEM_JSON = "application/problem+json";
@@ -144,7 +147,7 @@ class VacancyManualDescriptionIntegrationTest extends BaseIntegrationTest {
         }
         """;
     var response =
-        given()
+        asAcmeOwner()
             .contentType(ContentType.JSON)
             .body(requestBody)
             .when()
@@ -157,7 +160,7 @@ class VacancyManualDescriptionIntegrationTest extends BaseIntegrationTest {
   }
 
   private String postDescription(UUID vacancyId, String requestBody, HttpStatus expectedStatus) {
-    return given()
+    return asAcmeOwner()
         .contentType(ContentType.JSON)
         .body(requestBody)
         .when()

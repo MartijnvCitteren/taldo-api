@@ -1,11 +1,12 @@
 package eu.taldo.api.integration.vacancy;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static io.restassured.RestAssured.given;
+import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import eu.taldo.api.integration.BaseIntegrationTest;
+import eu.taldo.api.testSupport.AcmeAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.CurrencyCode;
 import eu.taldo.api.vacancy.adapter.in.web.contract.Language;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
@@ -26,7 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.jdbc.Sql;
 
 /** Partially updating a vacancy ({@code PATCH /vacancy/{id}}). */
-@Sql("/sql/existing-vacancy.sql")
+@Sql({AcmeAccounts.SEED, "/sql/existing-vacancy.sql"})
 class VacancyUpdateIntegrationTest extends BaseIntegrationTest {
 
   /** Seeded by {@code sql/existing-vacancy.sql}: Sales Manager in Amsterdam, NL, 32-40 hours. */
@@ -196,7 +197,7 @@ class VacancyUpdateIntegrationTest extends BaseIntegrationTest {
     var unknownId = UUID.fromString("0199a000-0000-7000-8000-0000000000ff");
 
     var response =
-        given()
+        asAcmeOwner()
             .contentType(ContentType.JSON)
             .body("{\"jobTitle\": \"Chef\"}")
             .when()
@@ -217,7 +218,7 @@ class VacancyUpdateIntegrationTest extends BaseIntegrationTest {
   void givenRequestThatBreaksContractWhenUpdatedThen400NamingTheField(
       String expectedField, String request) {
     var response =
-        given()
+        asAcmeOwner()
             .contentType(ContentType.JSON)
             .body(request)
             .when()
@@ -235,7 +236,7 @@ class VacancyUpdateIntegrationTest extends BaseIntegrationTest {
   @Test
   @DisplayName("given a currency outside Europe, when updated then 400")
   void givenCurrencyOutsideEuropeWhenUpdatedThen400() {
-    given()
+    asAcmeOwner()
         .contentType(ContentType.JSON)
         .body(
             "{\"offer\": {\"salaryMin\": 3800, \"currency\": \"USD\", \"salaryPeriod\": \"MONTHLY\"}}")
@@ -277,7 +278,7 @@ class VacancyUpdateIntegrationTest extends BaseIntegrationTest {
 
   private static VacancyResponse patch(UUID vacancyId, String body) {
     var response =
-        given()
+        asAcmeOwner()
             .contentType(ContentType.JSON)
             .body(body)
             .when()
