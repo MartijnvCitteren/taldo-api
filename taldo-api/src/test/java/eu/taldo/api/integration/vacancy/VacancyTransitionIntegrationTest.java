@@ -1,10 +1,11 @@
 package eu.taldo.api.integration.vacancy;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static io.restassured.RestAssured.given;
+import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import eu.taldo.api.integration.BaseIntegrationTest;
+import eu.taldo.api.testSupport.AcmeAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyTransitionAction;
 import io.restassured.http.ContentType;
@@ -15,8 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.jdbc.Sql;
 
 /** Moving a vacancy to its next status ({@code POST /vacancy/{id}/transitions}). */
+@Sql(AcmeAccounts.SEED)
 class VacancyTransitionIntegrationTest extends BaseIntegrationTest {
 
   private static final String PROBLEM_JSON = "application/problem+json";
@@ -63,7 +66,7 @@ class VacancyTransitionIntegrationTest extends BaseIntegrationTest {
   }
 
   private static ValidatableResponse postTransition(String body) {
-    return given()
+    return asAcmeOwner()
         .contentType(ContentType.JSON)
         .body(body)
         .when()

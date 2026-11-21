@@ -1,6 +1,7 @@
 package eu.taldo.api.integration;
 
 import static eu.taldo.api.testSupport.KeycloakStub.KEYCLOAK_WIREMOCK;
+import static eu.taldo.api.testSupport.KeycloakStub.stubRealm;
 import static eu.taldo.api.testSupport.MistralStub.MISTRAL_WIREMOCK;
 
 import io.restassured.RestAssured;
@@ -20,9 +21,11 @@ import org.springframework.test.context.DynamicPropertySource;
  *
  * <p>Everything inside the application is real. Only the world outside it is replaced: Mistral and
  * Keycloak by WireMock ({@code MistralStub}, {@code KeycloakStub}), so no test ever calls an AI
- * provider or an identity provider. {@code @Async} work runs to completion before the request
- * returns ({@link SynchronousAsyncConfig}). Declared here rather than per test class so every
- * integration test shares one application context.
+ * provider or an identity provider. Every endpoint needs an access token, so the stub realm serves
+ * its signing key before each test; tests sign their tokens with it ({@code AcmeAccounts}, {@code
+ * KeycloakStub}). {@code @Async} work runs to completion before the request returns ({@link
+ * SynchronousAsyncConfig}). Declared here rather than per test class so every integration test
+ * shares one application context.
  */
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -42,6 +45,12 @@ public abstract class BaseIntegrationTest {
   @DynamicPropertySource
   static void keycloakProperties(DynamicPropertyRegistry registry) {
     registry.add("taldo.keycloak.base-url", KEYCLOAK_WIREMOCK::baseUrl);
+  }
+
+  @BeforeEach
+  void stubKeycloakRealm() {
+    KEYCLOAK_WIREMOCK.resetAll();
+    stubRealm();
   }
 
   @BeforeEach

@@ -1,7 +1,7 @@
 package eu.taldo.api.integration.vacancy.generation;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static io.restassured.RestAssured.given;
+import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
 
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyDescriptionGeneration;
 import io.restassured.http.ContentType;
@@ -33,7 +33,7 @@ final class GenerationIntegrationCommons {
   /** Starts a generation with valid answers and returns its id. */
   static UUID startGeneration(UUID vacancyId) {
     var response =
-        given()
+        asAcmeOwner()
             .contentType(ContentType.JSON)
             .body(VALID_REQUEST)
             .when()

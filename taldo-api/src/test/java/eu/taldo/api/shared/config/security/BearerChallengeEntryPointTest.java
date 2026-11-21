@@ -9,6 +9,8 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.ThrowableProxy;
 import ch.qos.logback.core.read.ListAppender;
+import eu.taldo.api.shared.Constants;
+import java.io.IOException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,12 +22,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
+import tools.jackson.databind.json.JsonMapper;
 
 class BearerChallengeEntryPointTest {
   private static final String METHOD = "POST";
@@ -33,7 +37,10 @@ class BearerChallengeEntryPointTest {
   private static final String REJECTION_REASON =
       "An error occurred while attempting to decode the Jwt: Jwt expired at 2026-10-18T18:49:55Z";
 
-  private final BearerChallengeEntryPoint entryPoint = new BearerChallengeEntryPoint();
+  private static final JsonMapper JSON_MAPPER = JsonMapper.builder().build();
+
+  private final BearerChallengeEntryPoint entryPoint =
+      new BearerChallengeEntryPoint(new ProblemResponseWriter(JSON_MAPPER));
   private final Logger logger = (Logger) LoggerFactory.getLogger(BearerChallengeEntryPoint.class);
   private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
   private final MockHttpServletResponse response = new MockHttpServletResponse();
@@ -52,19 +59,24 @@ class BearerChallengeEntryPointTest {
   @ParameterizedTest(name = "{0}")
   @MethodSource("failures")
   @DisplayName(
-      "given an unauthenticated request, when commencing then 401 with only the challenge, and"
-          + " the reason is logged with method and path")
+      "given an unauthenticated request, when commencing then 401 with the challenge and a problem"
+          + " without the reason, and the reason is logged with method and path")
   void givenUnauthenticatedRequestWhenCommencingThen401WithChallengeAndReasonLogged(
       String failure,
       AuthenticationException exception,
       String challenge,
       Level level,
-      String message) {
+      String message)
+      throws IOException {
     entryPoint.commence(new MockHttpServletRequest(METHOD, PATH), response, exception);
 
     assertEquals(HttpStatus.UNAUTHORIZED.value(), response.getStatus());
     assertEquals(challenge, response.getHeader(HttpHeaders.WWW_AUTHENTICATE));
-    assertEquals(0, response.getContentAsByteArray().length);
+    assertEquals(MediaType.APPLICATION_PROBLEM_JSON_VALUE, response.getContentType());
+    var problem = JSON_MAPPER.readTree(response.getContentAsString());
+    assertEquals(Constants.UNAUTHORIZED_TITLE, problem.path("title").asString());
+    assertEquals(Constants.UNAUTHORIZED_DETAIL, problem.path("detail").asString());
+    assertEquals(PATH, problem.path("instance").asString());
     var event = logged.list.getFirst();
     assertEquals(level, event.getLevel());
     assertEquals(message, event.getFormattedMessage());
@@ -90,7 +102,7 @@ class BearerChallengeEntryPointTest {
   @DisplayName(
       "given an unexpected authentication failure, when commencing then 401 without a reason, and"
           + " the failure is logged as error with its stack trace")
-  void givenUnexpectedFailureWhenCommencingThen401AndFailureLoggedAsError() {
+  void givenUnexpectedFailureWhenCommencingThen401AndFailureLoggedAsError() throws IOException {
     var failure = new AuthenticationServiceException("Keycloak's signing keys are unavailable");
 
     entryPoint.commence(new MockHttpServletRequest(METHOD, PATH), response, failure);
@@ -107,7 +119,7 @@ class BearerChallengeEntryPointTest {
 
   @Test
   @DisplayName("given a request with a query string, when commencing then the query is not logged")
-  void givenRequestWithQueryStringWhenCommencingThenQueryNotLogged() {
+  void givenRequestWithQueryStringWhenCommencingThenQueryNotLogged() throws IOException {
     var request = new MockHttpServletRequest(METHOD, PATH);
     request.setQueryString("email=jane@acme.nl");
 
