@@ -78,8 +78,12 @@ domain model, not a layer bolted onto a finished ATS. That does not change the b
 
 ## Repository structure (multi-module)
 
-Root modules (`pom.xml` `<modules>`): **`taldo-contracts`** and **`taldo-api`**. Root package for both:
-`eu.taldo`.
+Root modules (`pom.xml` `<modules>`): **`taldo-contracts`**, **`taldo-api`** and **`taldo-bff`**. Root package for
+all: `eu.taldo`.
+
+- **`taldo-bff`** — the backend-for-frontend (ADR 0009, `docs/application/bff.md`): the browser's login with Keycloak
+  as a confidential client, the server-side session and the relay to taldo-api. No business logic, no data of its own,
+  no hexagon: business rules always go in taldo-api. Flat packages under `eu.taldo.bff`, every package `@NullMarked`.
 
 - **`taldo-contracts`** — the API contract as source of truth. Contains the OpenAPI/YAML spec(s) (e.g.
   `src/main/java/eu/taldo/contracts/VacancyApi.yml`); shared models and API interfaces are generated from these via

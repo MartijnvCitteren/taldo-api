@@ -23,7 +23,7 @@ services:
       retries: 10
       start_period: 10s
 
-  # Creates Keycloak's database, also on a volume that already exists. PostgreSQL databases are UTF-8 by default and
+  # Creates Keycloak's database and the BFF's session database (taldo_bff_db), also on a volume that already exists. PostgreSQL databases are UTF-8 by default and
   # use MVCC, so the collation and READ_COMMITTED_SNAPSHOT settings SQL Server needed are not required here.
   postgres-init:
     image: postgres:17.12
@@ -36,7 +36,9 @@ services:
       PGPASSWORD: "Super_secret-123"
     entrypoint: [ "/bin/sh", "-c" ]
     command:
-      - psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'keycloak_db'" | grep -q 1 || psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE keycloak_db"
+      - >-
+        (psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'keycloak_db'" | grep -q 1 || psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE keycloak_db")
+        && (psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'taldo_bff_db'" | grep -q 1 || psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE taldo_bff_db")
     restart: "no"
 
   # Identity provider (ADR 0006), development mode. The realm in docker/keycloak/ is imported on the first start
@@ -60,6 +62,8 @@ services:
       KC_HEALTH_ENABLED: "true"
       # Read by the realm import (${...} placeholder); the backend gets the same value.
       TALDO_BACKEND_CLIENT_SECRET: ${TALDO_BACKEND_CLIENT_SECRET:-local-only-backend-secret}
+      # The confidential client the BFF (taldo-bff) logs the browser in with (ADR 0009).
+      TALDO_WEB_CLIENT_SECRET: ${TALDO_WEB_CLIENT_SECRET:-local-only-web-secret}
       # RFC 9106's second recommended Argon2id option, as ADR 0003 chose for our own hashes: 64 MiB, 3 iterations,
       # parallelism 4. Keycloak's default is 7 MiB, 5 iterations, parallelism 1.
       KC_SPI_PASSWORD_HASHING__ARGON2__MEMORY: "65536"

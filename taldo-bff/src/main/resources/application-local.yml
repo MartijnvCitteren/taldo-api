@@ -1,0 +1,19 @@
+# Docker Compose defaults (docker-compose.yaml); never used outside a developer's machine.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/taldo_bff_db
+    username: postgres
+    password: Super_secret-123
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:local-only-web-secret}
+        provider:
+          keycloak:
+            issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/taldo}
+
+logging:
+  level:
+    eu.taldo: DEBUG

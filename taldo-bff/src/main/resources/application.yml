@@ -1,0 +1,58 @@
+server:
+  port: ${SERVER_PORT:8081}
+  # Behind the reverse proxy (or the Vite dev server) that serves the frontend on the same origin
+  # (ADR 0009, section 3): login redirects and the callback URL use the browser's host, not ours.
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      # The session id is the only thing the browser holds. __Host- makes the browser refuse the
+      # cookie unless it is Secure, has Path=/ and no Domain, so it never reaches another host.
+      cookie:
+        name: ${TALDO_SESSION_COOKIE_NAME:__Host-session}
+        http-only: true
+        secure: true
+        same-site: strict
+        path: /
+
+spring:
+  application:
+    name: "Taldo BFF"
+  threads:
+    virtual:
+      enabled: true
+
+  # Sessions live in PostgreSQL, so every instance sees them and a restart keeps users logged in.
+  # The idle timeout matches Keycloak's SSO session idle (ADR 0006, revision 2026-11-21, point 6):
+  # set both from the same value. Keycloak's 36-hour maximum ends the session through the refresh
+  # token.
+  session:
+    timeout: ${TALDO_SESSION_IDLE_TIMEOUT:24h}
+    jdbc:
+      initialize-schema: always
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  # The confidential client the browser logs in with. The issuer's discovery document supplies the
+  # endpoints, including end_session_endpoint for logout; it is read at startup, so Keycloak must be
+  # reachable then.
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${KEYCLOAK_CLIENT_ID:taldo-web}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/callback"
+            scope: openid
+        provider:
+          keycloak:
+            issuer-uri: ${KEYCLOAK_ISSUER_URI}
+            user-name-attribute: sub
+
+logging:
+  level:
+    eu.taldo: ${LOGGING_LEVEL_APP:INFO}
