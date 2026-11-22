@@ -80,8 +80,9 @@ realm configuration does not let such an address create or join a company.
 ## Profile — `GET /me`
 
 Requires an access token, nothing more: it answers before onboarding and while a user waits for approval, so the
-frontend can decide what to show next. `GetProfileService` reads Taldo's copy (ADR 0006, section 5) and never calls
-Keycloak.
+frontend can decide what to show next. `ProfileController` combines two use cases that each read Taldo's copy (ADR
+0006, section 5) and never call Keycloak: `GetProfileService` finds the `User`, `GetCompanyService` its company's
+name. The mapper maps the domain `User` directly; there is no separate profile read model.
 
 | Account | Response |
 |---------|----------|

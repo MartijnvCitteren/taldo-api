@@ -1,9 +1,8 @@
 package eu.taldo.api.adapter.in.rest.identity.mapper.response;
 
-import eu.taldo.api.application.port.in.identity.UserProfile;
+import eu.taldo.api.domain.identity.User;
 import eu.taldo.api.identity.adapter.in.web.contract.ProfileResponse;
 import eu.taldo.api.identity.adapter.in.web.contract.ProfileStatus;
-import java.util.Optional;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
@@ -18,12 +17,10 @@ import org.mapstruct.ReportingPolicy;
     unmappedTargetPolicy = ReportingPolicy.WARN)
 public interface ProfileResponseMapper {
 
-  default ProfileResponse toResponse(Optional<UserProfile> profile) {
-    return profile
-        .map(this::toResponse)
-        .orElseGet(() -> new ProfileResponse(ProfileStatus.ONBOARDING_REQUIRED));
+  default ProfileResponse toOnboardingRequiredResponse() {
+    return new ProfileResponse(ProfileStatus.ONBOARDING_REQUIRED);
   }
 
-  @Mapping(target = "email", source = "email.value")
-  ProfileResponse toResponse(UserProfile profile);
+  @Mapping(target = "email", source = "user.email.value")
+  ProfileResponse toResponse(User user, String companyName);
 }

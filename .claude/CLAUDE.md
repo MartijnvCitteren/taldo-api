@@ -199,6 +199,7 @@ them. When a review adds a new preference, add it here in the same PR.
   more than they protect.
 - Assert against the input you passed in (`assertEquals(request.summary(), result.summary())`), not against literals
   typed out a second time.
+- Name what the method under test returns `result`.
 - Contract validation is tested where it happens: through the REST adapter (integration test), not in domain tests.
 - More test rules (mocks, integration tests, Sonar hints) are in the `unit-testing` skill
   (`.claude/skills/unit-testing/SKILL.md`); read it before writing or changing tests.
