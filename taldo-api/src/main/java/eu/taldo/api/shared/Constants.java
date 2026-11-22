@@ -43,6 +43,8 @@ public class Constants {
   public static final String IDENTITY_PROVIDER_UNAVAILABLE_TITLE = "Identity provider unavailable";
   public static final String IDENTITY_PROVIDER_UNAVAILABLE_DETAIL =
       "The identity provider is not available right now. Try again later.";
+  public static final String NO_TOKEN_CHALLENGE = "Bearer";
+  public static final String REJECTED_TOKEN_CHALLENGE = "Bearer error=\"invalid_token\"";
   public static final String UNAUTHORIZED_TITLE = "Unauthorized";
   public static final String UNAUTHORIZED_DETAIL = "No valid access token. Log in again.";
   public static final String COMPANY_ACCESS_DENIED_TITLE = "No access to company data";

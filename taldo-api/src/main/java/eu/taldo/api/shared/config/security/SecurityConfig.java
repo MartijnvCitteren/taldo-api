@@ -2,6 +2,7 @@ package eu.taldo.api.shared.config.security;
 
 import eu.taldo.api.shared.config.WebConfig;
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,7 +14,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
-import tools.jackson.databind.json.JsonMapper;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 /**
  * The security filter chain. The backend is an OAuth2 resource server for the access tokens
@@ -27,9 +28,10 @@ import tools.jackson.databind.json.JsonMapper;
  * own user, not from the token. So a new endpoint is closed to accounts without company access
  * unless it is added here on purpose.
  *
- * <p>No token, or an invalid one, is {@code 401} with the bearer challenge of RFC 6750 ({@link
- * BearerChallengeEntryPoint}); a valid token without company access is {@code 403} ({@link
- * CompanyAccessDeniedHandler}). Both answer with a problem body of fixed texts and log the reason.
+ * <p>No token, or an invalid one, is {@code 401}; a valid token without company access is {@code
+ * 403}. The filter chain only hands the exception to Spring MVC's exception resolver, so the {@code
+ * GlobalExceptionHandler} writes these responses like every other problem response: no controller
+ * advice runs in a filter otherwise.
  *
  * <p>Error dispatches are permitted: when a request fails before it reaches a controller, the
  * container forwards it to the error page without the security context, and that forward must not
@@ -53,9 +55,8 @@ public class SecurityConfig {
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
       Converter<Jwt, AbstractAuthenticationToken> accountAuthenticationConverter,
-      JsonMapper jsonMapper)
+      @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver)
       throws Exception {
-    var problemResponseWriter = new ProblemResponseWriter(jsonMapper);
     return http.csrf(AbstractHttpConfigurer::disable)
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
@@ -74,8 +75,10 @@ public class SecurityConfig {
         .oauth2ResourceServer(resourceServer ->
             resourceServer
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(accountAuthenticationConverter))
-                .authenticationEntryPoint(new BearerChallengeEntryPoint(problemResponseWriter))
-                .accessDeniedHandler(new CompanyAccessDeniedHandler(problemResponseWriter)))
+                .authenticationEntryPoint((request, response, exception) ->
+                    handlerExceptionResolver.resolveException(request, response, null, exception))
+                .accessDeniedHandler((request, response, exception) ->
+                    handlerExceptionResolver.resolveException(request, response, null, exception)))
         .build();
   }
 }

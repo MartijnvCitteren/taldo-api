@@ -118,11 +118,11 @@ file differ. Onboarding checks it again through the `PublicEmailDomains` port, i
   need nothing more, so they work before onboarding and while a user waits for approval. No token is `401` with
   `WWW-Authenticate: Bearer`, an expired, forged, malformed or wrong-audience token `401` with `Bearer
   error="invalid_token"`; both with a problem body of fixed texts. Spring's default `error_description` (why the
-  token was rejected) and `resource_metadata` link are left out (`BearerChallengeEntryPoint`).
+  token was rejected) and `resource_metadata` link are left out (`GlobalExceptionHandler`).
 - **Company access** (ADR 0006, revision 2026-11-21, points 1 and 5): `AccountAuthenticationConverter` resolves the
   token's `sub` to the acting user (`FindActingUserService`: user id and company id) when the user may access company
   data (`User.mayAccessCompanyData`: status `ACTIVE`), and grants `COMPANY_ACCESS`. An account without a Taldo user or
-  with a `PENDING_APPROVAL` user is authenticated without it and gets `403` (`CompanyAccessDeniedHandler`) on every
+  with a `PENDING_APPROVAL` user is authenticated without it and gets `403` (`GlobalExceptionHandler`) on every
   company endpoint. Because the lookup runs per request, approving or blocking a user takes effect on their next
   request. A token without `sub` is `401`.
 - Authentication failures are logged with method and path, never the token, other headers, the query string or the

@@ -101,8 +101,8 @@ The response goes back up the same way: domain object ─▶ response mapper ─
   (`FindActingUserUseCase`, one indexed lookup) and grants the authority `COMPANY_ACCESS` only to an `ACTIVE` user.
   `/onboarding` and `/me` need just the token; every other path needs `COMPANY_ACCESS`, so a new endpoint is closed to
   accounts without company access by default, and such an account gets `403`. Rights never come from the token: the
-  realm's roles are not read. `401` and `403` are problem responses with fixed texts, written in the filter chain
-  (`BearerChallengeEntryPoint`, `CompanyAccessDeniedHandler`). Error dispatches are permitted, so a request that fails
+  realm's roles are not read. `401` and `403` are problem responses with fixed texts, written
+  by `GlobalExceptionHandler`: the entry point and access-denied handler only pass the exception to Spring MVC's `HandlerExceptionResolver`, so no problem response is built in the filter chain. Error dispatches are permitted, so a request that fails
   before a controller keeps its `500`. CSRF,
   form login, HTTP basic and logout are disabled, sessions are stateless, and CORS defers to `WebConfig`. Spring
   Security adds its default response headers (e.g. `X-Content-Type-Options: nosniff`).
