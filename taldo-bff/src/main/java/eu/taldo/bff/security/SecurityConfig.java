@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
@@ -43,6 +45,15 @@ public class SecurityConfig {
 
   /** The client registration in {@code application.yml}: the only identity provider. */
   static final String REGISTRATION_ID = "keycloak";
+
+  /**
+   * Keeps the user's tokens in their session, so in PostgreSQL. Spring Boot's default keeps them in
+   * memory, which a restart loses and another instance cannot see.
+   */
+  @Bean
+  OAuth2AuthorizedClientRepository authorizedClientRepository() {
+    return new HttpSessionOAuth2AuthorizedClientRepository();
+  }
 
   @Bean
   SecurityFilterChain securityFilterChain(
