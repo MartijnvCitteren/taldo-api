@@ -4,8 +4,7 @@ The browser's login and session (ADR 0009). The BFF logs the browser in with Key
 keeps the tokens in a server-side session; the browser only holds an opaque session cookie. It has no business logic
 and no data of its own. taldo-api does not know it exists: it keeps checking bearer tokens (ADR 0006).
 
-This page covers what is built: login, the session, CSRF and logout. Relaying API calls to taldo-api is the next step;
-until then an authenticated `/api/v1/**` call answers `404`.
+This page covers login, the session, CSRF, logout and the relay of API calls to taldo-api.
 
 ## Endpoints
 
@@ -17,12 +16,37 @@ provider (section 2).
 | `GET /login` | Starts authorization code + PKCE with Keycloak (`LoginRequestResolver`), client `taldo-web`, scope `openid`. A browser navigation, not a `fetch`. |
 | `GET /login/callback` | Keycloak returns here; the code is exchanged with the client secret and the PKCE verifier. Success: `302` to `/` with a new session id. Failure (e.g. a `state` that belongs to no started login): `302` to `/?login=failed`, logged at `warn`. |
 | `POST /logout` | Needs the CSRF header. Ends the session and answers `200 {"logoutUrl": "…"}`: Keycloak's end-session URL with `id_token_hint` and `post_logout_redirect_uri` `{baseUrl}/`. The frontend navigates there, so Keycloak's session ends too (`LogoutUrlResponder`). |
+| `/api/v1/**` (any method) | Relayed to taldo-api with the user's access token (see "Relay"). |
 | anything else | Needs a session; without one `401`, never a redirect. The frontend decides when to go to `/login`. |
 
 **Why logout answers a URL instead of redirecting:** the frontend calls it with `fetch` (it needs the CSRF header), and
 a redirect would be followed inside `fetch`, not in the address bar. The BFF session is already gone when the answer
 arrives, so a skipped navigation leaves no usable session here; only Keycloak's own SSO session lives on until it
 expires.
+
+## Relay
+
+`ApiRelayController` passes `/api/v1/**` on to taldo-api (`TALDO_API_BASE_URL`, without the context path) on the same
+path with the raw query, and passes taldo-api's answer back as it is: status, body and only `Content-Type`, `Accept`
+(the `415` answer names the accepted types) and `Retry-After`. It adds no rules of its own.
+
+- **Requests** carry only `Content-Type`, `Accept`, `Accept-Language`, the body and `Authorization: Bearer` with the
+  user's access token. The browser's cookies and the CSRF header never reach taldo-api; the token never reaches the
+  browser.
+- **`Location`** pointing into taldo-api becomes a path on the browser's origin (`/api/v1/vacancy/…`), because the
+  browser cannot reach taldo-api's address.
+- **Token renewal** (`AccessTokens`, `DefaultOAuth2AuthorizedClientManager`): an access token that has expired or
+  expires within a minute is renewed with the refresh token before the call. The tokens are kept in the session
+  (`HttpSessionOAuth2AuthorizedClientRepository`); Spring Boot's default would keep them in memory, which a restart
+  loses and another instance cannot see.
+- **Failures** tell a retry that can help from one that cannot:
+
+  | Situation | Answer |
+  |-----------|--------|
+  | Keycloak refuses the refresh token (`invalid_grant`: its session ended, idle or 36-hour maximum) | `401`; the BFF session is invalidated, so the next call is `401` without asking Keycloak. Log in again. |
+  | Keycloak cannot be asked (down, `5xx`) | `503` problem; the session stays, a retry may succeed. Logged at `warn`. |
+  | taldo-api cannot be reached or times out (5 s connect, 15 s read) | `502` problem. Logged at `warn`. |
+  | Any answer from taldo-api, `4xx` and `5xx` included | Passed on unchanged. |
 
 ## Session and cookies
 
@@ -31,7 +55,7 @@ expires.
   Java-serialized: the session table holds refresh tokens and must be protected like a secret store.
 - **Idle timeout** `TALDO_SESSION_IDLE_TIMEOUT` (default `24h`): set it to the same value as Keycloak's SSO session
   idle (ADR 0006, revision 2026-11-21, point 6). There is no absolute limit in the BFF: Keycloak's 36-hour maximum ends
-  the refresh token, which the relay will turn into a `401`.
+  the refresh token, which the relay turns into a `401`.
 - **Session cookie** `__Host-session` (`TALDO_SESSION_COOKIE_NAME`): `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`,
   no `Domain`. `SameSite=Strict` only works because Keycloak is on the same site as the app (`auth.taldo.eu` and
   `app.taldo.eu`, or `localhost` with another port): the callback from Keycloak is then a same-site navigation and
@@ -51,6 +75,7 @@ expires.
 | `SPRING_DATASOURCE_URL`, `_USERNAME`, `_PASSWORD` | – (`local`: `taldo_bff_db` in Docker Compose) | Sessions. |
 | `TALDO_SESSION_IDLE_TIMEOUT` | `24h` | Keep equal to Keycloak's SSO session idle. |
 | `TALDO_SESSION_COOKIE_NAME` | `__Host-session` | |
+| `TALDO_API_BASE_URL` | – (`local`: `http://localhost:8090`) | taldo-api without its context path; private in production. |
 | `SERVER_PORT` | `8081` | |
 
 Locally: `docker compose up`, then run `taldo-bff` with the `local` profile. The frontend's Vite dev server forwards
@@ -70,7 +95,11 @@ Locally: `docker compose up`, then run `taldo-bff` with the `local` profile. The
 `LoginIntegrationTest` runs the whole login over HTTP against a WireMock Keycloak (`KeycloakStub`: discovery, keys,
 token endpoint; the ID token carries the nonce of the login it belongs to): the authorization request (client, PKCE,
 callback, cookie attributes), the code exchange (client secret and PKCE verifier), a callback with a foreign `state`,
-`401` without a session, logout with and without the CSRF token. Sessions run on H2.
+`401` without a session, logout with and without the CSRF token. `ApiRelayIntegrationTest` replaces taldo-api with
+WireMock too: what taldo-api receives (path, query, bearer token, body; no cookies or CSRF header), the relative
+`Location`, `403` without the CSRF token, problems passed on, renewal of an expired token, a refused renewal (`401`,
+session gone), Keycloak unavailable (`503`, session kept) and taldo-api unreachable (`502`). Both share one context
+(`BffIntegrationTest`) and the login steps (`BrowserLogin`). Sessions run on H2.
 
 ## Known gaps
 
@@ -80,3 +109,7 @@ callback, cookie attributes), the code exchange (client secret and PKCE verifier
   both in step.
 - Whether browsers accept a `__Host-` cookie over `http://localhost` is untested; if not, set `TALDO_SESSION_COOKIE_NAME`
   locally.
+- Not run end to end against a real Keycloak and the frontend yet: that comes with the frontend's switch to the BFF.
+- Refresh-token rotation is off in the realm (ADR 0009, section 5). Two parallel calls that both renew the token use
+  the same refresh token; with rotation on, the second would fail and end the session.
+- taldo-api's CORS configuration is still there; it can go once no browser calls taldo-api directly.

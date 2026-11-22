@@ -44,7 +44,7 @@ public class SecurityConfig {
   static final String LOGIN_FAILED_URL = "/?login=failed";
 
   /** The client registration in {@code application.yml}: the only identity provider. */
-  static final String REGISTRATION_ID = "keycloak";
+  public static final String REGISTRATION_ID = "keycloak";
 
   /**
    * Keeps the user's tokens in their session, so in PostgreSQL. Spring Boot's default keeps them in
