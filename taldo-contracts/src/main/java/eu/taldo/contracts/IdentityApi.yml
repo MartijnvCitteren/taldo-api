@@ -4,7 +4,8 @@ info:
   description: >
     API for accounts in Taldo. Registration, e-mail verification, login and passwords are handled by the identity
     provider (Keycloak, ADR 0006), not by this API. After the first login, the frontend calls `POST /onboarding` to
-    give the account its Taldo user and company. `PATCH /me` changes the user's names.
+    give the account its Taldo user and company. `GET /me` tells the frontend who is logged in and what to show next;
+    `PATCH /me` changes the user's names.
   version: 1.0.0
 servers:
   - url: /api/v1
@@ -86,6 +87,41 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
 
   /me:
+    get:
+      operationId: getProfile
+      tags: [Profile]
+      summary: Get the logged-in user's profile
+      description: >
+        Who is logged in, and what the frontend should show next. Works before onboarding and while the user waits
+        for approval. `status` decides the next step: `ONBOARDING_REQUIRED` means the account has no Taldo user yet
+        (call `POST /onboarding`; every other field is `null`), `PENDING_APPROVAL` means the owner of the company has
+        to approve the user before company endpoints answer anything but `403`, and `ACTIVE` means the user can work.
+      responses:
+        '200':
+          description: The profile of the logged-in account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+              examples:
+                active:
+                  summary: An onboarded owner
+                  value:
+                    status: ACTIVE
+                    firstName: Anna
+                    lastName: de Vries
+                    email: anna@acme.nl
+                    jobRole: FOUNDER_OR_DIRECTOR
+                    membership: OWNER
+                    companyName: Acme
+                onboardingRequired:
+                  summary: An account that has not onboarded yet
+                  value:
+                    status: ONBOARDING_REQUIRED
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       operationId: changeName
       tags: [Profile]
@@ -230,6 +266,47 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/AccountStatus'
+
+    ProfileResponse:
+      type: object
+      required: [status]
+      description: >
+        The logged-in user. While the status is `ONBOARDING_REQUIRED`, every field but `status` is `null`; otherwise
+        every field has a value.
+      properties:
+        status:
+          $ref: '#/components/schemas/ProfileStatus'
+        firstName:
+          type: string
+          maxLength: 35
+        lastName:
+          type: string
+          maxLength: 35
+        email:
+          type: string
+          format: email
+          maxLength: 75
+        jobRole:
+          $ref: '#/components/schemas/JobRole'
+        membership:
+          $ref: '#/components/schemas/Membership'
+        companyName:
+          type: string
+          description: The name of the user's company, derived from its e-mail domain until someone corrects it.
+
+    ProfileStatus:
+      type: string
+      description: >
+        `ONBOARDING_REQUIRED`: the account has no Taldo user yet; call `POST /onboarding`. `PENDING_APPROVAL`: the user
+        joined an existing company and waits for its owner to approve them. `ACTIVE`: the user can work with their
+        company's data.
+      enum: [ONBOARDING_REQUIRED, PENDING_APPROVAL, ACTIVE]
+
+    Membership:
+      type: string
+      description: >
+        `OWNER`: the first user of the company. `MEMBER`: every user who joined after the owner. Derived, never chosen.
+      enum: [OWNER, MEMBER]
 
     AccountStatus:
       type: string

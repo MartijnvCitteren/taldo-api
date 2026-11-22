@@ -5,8 +5,9 @@ its own `company` and `app_user` and everything that decides access to company d
 
 This page covers what is built today: onboarding a logged-in Keycloak account (`POST /onboarding`), the domain
 model, its persistence and the Keycloak adapter. The backend's own registration flow (ADR 0003) has been removed.
-Users change their names with `PATCH /me`. Every endpoint requires an access token, and company endpoints also an
-active Taldo user (see "REST adapter and security"). `GET /me` and owner approval do not exist yet.
+Users read their profile with `GET /me` and change their names with `PATCH /me`. Every endpoint requires an access
+token, and company endpoints also an active Taldo user (see "REST adapter and security"). Owner approval does not
+exist yet.
 
 ## Domain model
 
@@ -76,6 +77,22 @@ organization; that is for owner approval.
 The public-domain check repeats what the realm already enforces (ADR 0006, section 3, layer 2), so one mistake in the
 realm configuration does not let such an address create or join a company.
 
+## Profile — `GET /me`
+
+Requires an access token, nothing more: it answers before onboarding and while a user waits for approval, so the
+frontend can decide what to show next. `ProfileController` combines two use cases that each read Taldo's copy (ADR
+0006, section 5) and never call Keycloak: `GetProfileService` finds the `User`, `GetCompanyService` its company's
+name. The mapper maps the domain `User` directly; there is no separate profile read model.
+
+| Account | Response |
+|---------|----------|
+| No Taldo user for the token's `sub` | `200` with `status: ONBOARDING_REQUIRED`; every other field `null` |
+| `PENDING_APPROVAL` or `ACTIVE` user | `200` with that `status`, names, e-mail address, job role, membership and the company name |
+
+`ProfileStatus` in the contract is a separate enum from onboarding's `AccountStatus`, so adding
+`ONBOARDING_REQUIRED` did not change the onboarding response. A user's company always exists (`app_user.company_id`
+is a foreign key); a missing one is our bug and answers `500`.
+
 ## Change names — `PATCH /me`
 
 Requires an access token. Body: `firstName` and/or `lastName`, each optional, with the contract's 1–35 character
@@ -102,7 +119,8 @@ file differ. Onboarding checks it again through the `PublicEmailDomains` port, i
 
 ## REST adapter and security
 
-- `OnboardingController` implements the generated `OnboardingApi`, `ProfileController` the generated `MeApi`.
+- `OnboardingController` implements the generated `OnboardingApi`, `ProfileController` the generated `MeApi`
+  (`GET` and `PATCH /me`).
   `AuthenticatedUser.subject()` reads the `sub` of the validated token from the security context; the request mapper
   combines it with `jobRole` into the command.
 - `IdentityExceptionHandler` (highest precedence) maps `OnboardingNotAllowedException` to `403`,
