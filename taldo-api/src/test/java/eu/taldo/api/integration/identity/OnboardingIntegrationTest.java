@@ -20,7 +20,7 @@ import static eu.taldo.api.testSupport.KeycloakStub.otherAudienceAccessToken;
 import static eu.taldo.api.testSupport.KeycloakStub.stubRealm;
 import static eu.taldo.api.testSupport.KeycloakStub.user;
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.emptyString;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -29,6 +29,7 @@ import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import eu.taldo.api.identity.adapter.in.web.contract.AccountStatus;
 import eu.taldo.api.identity.adapter.in.web.contract.OnboardingResponse;
 import eu.taldo.api.integration.BaseIntegrationTest;
+import eu.taldo.api.shared.Constants;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
@@ -154,7 +155,7 @@ class OnboardingIntegrationTest extends BaseIntegrationTest {
       "given no valid access token, when onboarding then 401 without the reason, and Keycloak is"
           + " not asked")
   void givenNoValidAccessTokenWhenOnboardingThen401WithoutReason(
-      String problem, String accessToken) {
+      String problem, String accessToken, String challenge) {
     var request = accessToken == null ? given() : withToken(accessToken);
 
     request
@@ -164,20 +165,21 @@ class OnboardingIntegrationTest extends BaseIntegrationTest {
         .post("/onboarding")
         .then()
         .statusCode(HttpStatus.UNAUTHORIZED.value())
-        .header("WWW-Authenticate", "Bearer")
-        .body(emptyString());
+        .header("WWW-Authenticate", challenge)
+        .contentType(PROBLEM_JSON)
+        .body("detail", is(Constants.UNAUTHORIZED_DETAIL));
 
     KEYCLOAK_WIREMOCK.verify(0, getRequestedFor(urlEqualTo(NEW_USER_PATH)));
   }
 
-  /** An invalid token is ignored, so it gets the same challenge as no token at all. */
   private static Stream<Arguments> unauthenticatedRequests() {
+    var rejected = "Bearer error=\"invalid_token\"";
     return Stream.of(
-        arguments("no token", null),
-        arguments("expired token", expiredAccessToken(NEW_SUBJECT)),
-        arguments("token signed with another key", foreignAccessToken(NEW_SUBJECT)),
-        arguments("token for another audience", otherAudienceAccessToken(NEW_SUBJECT)),
-        arguments("not a token", "not-a-jwt"));
+        arguments("no token", null, "Bearer"),
+        arguments("expired token", expiredAccessToken(NEW_SUBJECT), rejected),
+        arguments("token signed with another key", foreignAccessToken(NEW_SUBJECT), rejected),
+        arguments("token for another audience", otherAudienceAccessToken(NEW_SUBJECT), rejected),
+        arguments("not a token", "not-a-jwt", rejected));
   }
 
   @ParameterizedTest

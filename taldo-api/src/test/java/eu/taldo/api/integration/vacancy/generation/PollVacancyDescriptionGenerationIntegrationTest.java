@@ -8,6 +8,7 @@ import static eu.taldo.api.integration.vacancy.generation.GenerationIntegrationC
 import static eu.taldo.api.integration.vacancy.generation.GenerationIntegrationCommons.SALES_MANAGER_VACANCY_ID;
 import static eu.taldo.api.integration.vacancy.generation.GenerationIntegrationCommons.SEED_SCRIPT;
 import static eu.taldo.api.integration.vacancy.generation.GenerationIntegrationCommons.startGeneration;
+import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
 import static eu.taldo.api.testSupport.MistralStub.COMPLETIONS;
 import static eu.taldo.api.testSupport.MistralStub.JOB_DESCRIPTION;
 import static eu.taldo.api.testSupport.MistralStub.MISTRAL_WIREMOCK;
@@ -15,13 +16,13 @@ import static eu.taldo.api.testSupport.MistralStub.SUMMARY;
 import static eu.taldo.api.testSupport.MistralStub.TASKS;
 import static eu.taldo.api.testSupport.MistralStub.completion;
 import static eu.taldo.api.testSupport.MistralStub.draftCompletion;
-import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import eu.taldo.api.integration.BaseIntegrationTest;
+import eu.taldo.api.testSupport.AcmeAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyDescriptionGeneration;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyDescriptionGenerationStatus;
@@ -43,7 +44,7 @@ import org.springframework.test.context.jdbc.Sql;
  * replaced by WireMock and polls the result. {@code @Async} work has finished when the {@code POST}
  * returns, so the poll sees the final outcome.
  */
-@Sql(SEED_SCRIPT)
+@Sql({AcmeAccounts.SEED, SEED_SCRIPT})
 class PollVacancyDescriptionGenerationIntegrationTest extends BaseIntegrationTest {
 
   @BeforeEach
@@ -135,7 +136,7 @@ class PollVacancyDescriptionGenerationIntegrationTest extends BaseIntegrationTes
 
   private static VacancyDescriptionGeneration poll(UUID vacancyId, UUID generationId) {
     var response =
-        given()
+        asAcmeOwner()
             .when()
             .get("/vacancy/{id}/generate-description/{generationId}", vacancyId, generationId)
             .then()
@@ -149,7 +150,7 @@ class PollVacancyDescriptionGenerationIntegrationTest extends BaseIntegrationTes
   private static ProblemDetails pollExpectingProblem(
       UUID vacancyId, UUID generationId, HttpStatus expectedStatus) {
     var response =
-        given()
+        asAcmeOwner()
             .when()
             .get("/vacancy/{id}/generate-description/{generationId}", vacancyId, generationId)
             .then()

@@ -385,8 +385,8 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: >
-        Multi-tenancy (organization scoping) is derived from this token, never from the request or
-        response body.
+        An access token from the identity provider (Keycloak realm `taldo`). The company whose data a request
+        reaches is derived from the token's user, never from the request or response body.
 
   parameters:
     VacancyId:
@@ -517,13 +517,22 @@ components:
           schema:
             $ref: '#/components/schemas/ProblemDetails'
     Unauthorized:
-      description: Missing or invalid authentication.
+      description: >
+        No access token, or an expired or invalid one. `WWW-Authenticate` is `Bearer` without a token and
+        `Bearer error="invalid_token"` with a rejected one; neither the header nor the body says why a token was
+        rejected. Log in again.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetails'
     Forbidden:
-      description: The authenticated user does not have the required authorization to perform this action.
+      description: >
+        The account has no access to company data yet: it has not been onboarded (`POST /onboarding`), or its user
+        waits for the owner of the company to approve them. `GET /me` tells which.
       content:
         application/problem+json:
           schema:

@@ -152,13 +152,17 @@ components:
   responses:
     Unauthorized:
       description: >
-        No access token, or an expired or invalid one. The body is empty. `WWW-Authenticate` is `Bearer` without a
-        token and `Bearer error="invalid_token"` with a rejected one; it does not say why a token was rejected. Log in
-        again.
+        No access token, or an expired or invalid one. `WWW-Authenticate` is `Bearer` without a token and
+        `Bearer error="invalid_token"` with a rejected one; neither the header nor the body says why a token was
+        rejected. Log in again.
       headers:
         WWW-Authenticate:
           schema:
             type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
     BadRequest:
       description: The request was malformed or failed validation.
       content:

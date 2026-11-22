@@ -1,31 +1,44 @@
 package eu.taldo.api.shared.config.security;
 
 import eu.taldo.api.shared.config.WebConfig;
+import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 /**
  * The security filter chain. The backend is an OAuth2 resource server for the access tokens
  * Keycloak issues (ADR 0006, section 6): it checks their signature with Keycloak's public keys, the
- * issuer and the expiry, without calling Keycloak per request.
+ * issuer, the expiry and the audience, without calling Keycloak per request.
  *
- * <p>Security is relaxed for now: every request is permitted, except the identity endpoints that
- * act on the logged-in account, which cannot work without one. A token that is not valid is ignored
- * instead of answered with {@code 401} ({@link LenientBearerTokenResolver}). Securing the other
- * endpoints and scoping them to a company is a later story (#103).
+ * <p>Every endpoint requires a valid token (ADR 0006, revision 2026-11-21). The identity endpoints
+ * that act on the logged-in account ({@code /onboarding}, {@code /me}) need nothing more: they work
+ * before onboarding and while a user waits for approval. Every other endpoint reaches company data
+ * and needs the {@link #COMPANY_ACCESS} authority, which the token converter grants from Taldo's
+ * own user, not from the token. So a new endpoint is closed to accounts without company access
+ * unless it is added here on purpose.
  *
- * <p>A {@code 401} carries the bearer challenge of RFC 6750 and nothing more; why the request was
- * not authenticated goes to the log ({@link BearerChallengeEntryPoint}).
+ * <p>No token, or an invalid one, is {@code 401}; a valid token without company access is {@code
+ * 403}. The filter chain only hands the exception to Spring MVC's exception resolver, so the {@code
+ * GlobalExceptionHandler} writes these responses like every other problem response: no controller
+ * advice runs in a filter otherwise.
+ *
+ * <p>Error dispatches are permitted: when a request fails before it reaches a controller, the
+ * container forwards it to the error page without the security context, and that forward must not
+ * turn a {@code 500} into a {@code 401}.
  *
  * <p>CSRF protection, form login, HTTP basic and logout are disabled because the API is stateless
- * and will authenticate with bearer tokens, not cookies or sessions. CORS defers to the Spring MVC
+ * and authenticates with bearer tokens, not cookies or sessions. CORS defers to the Spring MVC
  * configuration in {@link WebConfig}.
  *
  * <p>Only in a servlet web application: a filter chain has nothing to filter without one, and a
@@ -35,8 +48,14 @@ import org.springframework.security.web.SecurityFilterChain;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class SecurityConfig {
 
+  /** The authority of an account that acts as a user with access to its company's data. */
+  public static final String COMPANY_ACCESS = "COMPANY_ACCESS";
+
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder)
+  SecurityFilterChain securityFilterChain(
+      HttpSecurity http,
+      Converter<Jwt, AbstractAuthenticationToken> accountAuthenticationConverter,
+      @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver)
       throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable)
         .formLogin(AbstractHttpConfigurer::disable)
@@ -46,12 +65,20 @@ public class SecurityConfig {
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(requests ->
-            requests.requestMatchers("/onboarding", "/me").authenticated().anyRequest().permitAll())
+            requests
+                .dispatcherTypeMatchers(DispatcherType.ERROR)
+                .permitAll()
+                .requestMatchers("/onboarding", "/me")
+                .authenticated()
+                .anyRequest()
+                .hasAuthority(COMPANY_ACCESS))
         .oauth2ResourceServer(resourceServer ->
             resourceServer
-                .bearerTokenResolver(new LenientBearerTokenResolver(jwtDecoder))
-                .jwt(Customizer.withDefaults())
-                .authenticationEntryPoint(new BearerChallengeEntryPoint()))
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(accountAuthenticationConverter))
+                .authenticationEntryPoint((request, response, exception) ->
+                    handlerExceptionResolver.resolveException(request, response, null, exception))
+                .accessDeniedHandler((request, response, exception) ->
+                    handlerExceptionResolver.resolveException(request, response, null, exception)))
         .build();
   }
 }

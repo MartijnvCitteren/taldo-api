@@ -1,11 +1,12 @@
 package eu.taldo.api.integration.vacancy;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static io.restassured.RestAssured.given;
+import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import eu.taldo.api.integration.BaseIntegrationTest;
+import eu.taldo.api.testSupport.AcmeAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
 import io.restassured.http.Method;
 import java.util.UUID;
@@ -15,11 +16,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.jdbc.Sql;
 
 /**
  * Every operation the contract declares but the controller does not implement yet must answer with
  * an explicit 501 problem response, never with an empty success.
  */
+@Sql(AcmeAccounts.SEED)
 class VacancyNotImplementedIntegrationTest extends BaseIntegrationTest {
 
   private static final String PROBLEM_JSON = "application/problem+json";
@@ -33,7 +36,7 @@ class VacancyNotImplementedIntegrationTest extends BaseIntegrationTest {
   void givenNotImplementedOperationWhenCalledThenResponds501ProblemDetail(
       String operationId, Method method, String path) {
     var response =
-        given()
+        asAcmeOwner()
             .when()
             .request(method, path)
             .then()
