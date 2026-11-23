@@ -1,15 +1,15 @@
 package eu.taldo.api.integration.identity;
 
-import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
 import static eu.taldo.api.testSupport.KeycloakStub.KEYCLOAK_WIREMOCK;
 import static eu.taldo.api.testSupport.KeycloakStub.accessToken;
+import static eu.taldo.api.testSupport.SeededAccounts.asAcmeOwner;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import eu.taldo.api.integration.BaseIntegrationTest;
-import eu.taldo.api.testSupport.AcmeAccounts;
+import eu.taldo.api.testSupport.SeededAccounts;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -20,7 +20,7 @@ import org.springframework.test.context.jdbc.Sql;
  * authenticated account, also before onboarding and while waiting for approval, from Taldo's copy:
  * Keycloak is never asked. The expected values are those of the seed ({@code identity-acme.sql}).
  */
-@Sql(AcmeAccounts.SEED)
+@Sql(SeededAccounts.SEED)
 class GetProfileIntegrationTest extends BaseIntegrationTest {
   private static final String NOT_ONBOARDED_SUBJECT = "6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b";
 
@@ -52,7 +52,7 @@ class GetProfileIntegrationTest extends BaseIntegrationTest {
   void givenMemberPendingApprovalWhenGettingTheProfileThen200PendingApproval() {
     given()
         .auth()
-        .oauth2(accessToken(AcmeAccounts.PENDING_MEMBER_SUBJECT))
+        .oauth2(accessToken(SeededAccounts.PENDING_MEMBER_SUBJECT))
         .when()
         .get("/me")
         .then()

@@ -1,7 +1,8 @@
 package eu.taldo.api.integration.vacancy;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
+import static eu.taldo.api.testSupport.SeededAccounts.asAcmeOwner;
+import static eu.taldo.api.testSupport.SeededAccounts.asInitechOwner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -9,7 +10,7 @@ import eu.taldo.api.adapter.out.persistence.vacancy.VacancyDescriptionJpaReposit
 import eu.taldo.api.adapter.out.persistence.vacancy.VacancyJpaRepository;
 import eu.taldo.api.domain.vacancy.valueobject.VacancyDescriptionSource;
 import eu.taldo.api.integration.BaseIntegrationTest;
-import eu.taldo.api.testSupport.AcmeAccounts;
+import eu.taldo.api.testSupport.SeededAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyDescriptionResponse;
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyResponse;
@@ -26,7 +27,7 @@ import org.springframework.test.context.jdbc.Sql;
  * Runs against an in-memory H2 database, exercising {@code POST /vacancy/{id}/description}
  * end-to-end through the real REST, application and persistence layers.
  */
-@Sql(AcmeAccounts.SEED)
+@Sql(SeededAccounts.SEED)
 class VacancyManualDescriptionIntegrationTest extends BaseIntegrationTest {
 
   private static final String PROBLEM_JSON = "application/problem+json";
@@ -131,6 +132,23 @@ class VacancyManualDescriptionIntegrationTest extends BaseIntegrationTest {
   @DisplayName("given an unknown vacancy id, when submitted then rejected with 404")
   void givenUnknownVacancyIdWhenSubmittedThenRejectedWith404() {
     postDescription(UUID.randomUUID(), VALID_DESCRIPTION_REQUEST, HttpStatus.NOT_FOUND);
+  }
+
+  @Test
+  @DisplayName("given a vacancy of another company, when submitted then rejected with 404")
+  void givenVacancyOfAnotherCompanyWhenSubmittedThenRejectedWith404() {
+    var acmeVacancyId = createVacancy();
+
+    asInitechOwner()
+        .contentType(ContentType.JSON)
+        .body(VALID_DESCRIPTION_REQUEST)
+        .when()
+        .post("/vacancy/{id}/description", acmeVacancyId)
+        .then()
+        .statusCode(HttpStatus.NOT_FOUND.value())
+        .contentType(PROBLEM_JSON);
+
+    assertTrue(vacancyDescriptionJpaRepository.findByVacancyId(acmeVacancyId).isEmpty());
   }
 
   private UUID createVacancy() {

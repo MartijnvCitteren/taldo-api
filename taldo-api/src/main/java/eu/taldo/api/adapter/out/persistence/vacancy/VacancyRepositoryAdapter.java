@@ -1,5 +1,6 @@
 package eu.taldo.api.adapter.out.persistence.vacancy;
 
+import eu.taldo.api.adapter.out.persistence.identity.CompanyJpaRepository;
 import eu.taldo.api.adapter.out.persistence.vacancy.mapper.VacancyDescriptionJpaMapper;
 import eu.taldo.api.adapter.out.persistence.vacancy.mapper.VacancyJpaMapper;
 import eu.taldo.api.application.exception.VacancyModifiedConcurrentlyException;
@@ -17,7 +18,8 @@ import org.springframework.stereotype.Component;
  * {@code @OneToOne} relation between {@code VacancyJpaEntity} and {@code
  * VacancyDescriptionJpaEntity}, wiring the relation before persisting. Note: {@code orphanRemoval}
  * does not fire when merging a freshly-built transient parent graph, so explicit {@code deleteById}
- * is required to clear a description row (see ADR 0005 addendum).
+ * is required to clear a description row (see ADR 0005 addendum). The company is set as a reference
+ * (no query), so the foreign key is written without loading the company.
  */
 @Component
 @RequiredArgsConstructor
@@ -27,6 +29,7 @@ public class VacancyRepositoryAdapter implements VacancyRepository {
   private final VacancyDescriptionJpaMapper descriptionJpaMapper;
   private final VacancyJpaRepository jpaRepository;
   private final VacancyDescriptionJpaRepository descriptionJpaRepository;
+  private final CompanyJpaRepository companyJpaRepository;
 
   /**
    * Save a vacancy and its description (if present) via the cascaded {@code @OneToOne} relation in
@@ -40,6 +43,7 @@ public class VacancyRepositoryAdapter implements VacancyRepository {
   @Override
   public void save(Vacancy vacancy) {
     var jpaVacancy = jpaMapper.toJpaEntity(vacancy);
+    jpaVacancy.setCompany(companyJpaRepository.getReferenceById(vacancy.getCompanyId()));
     try {
       saveWithDescription(vacancy, jpaVacancy);
     } catch (OptimisticLockingFailureException e) {
@@ -71,14 +75,17 @@ public class VacancyRepositoryAdapter implements VacancyRepository {
   }
 
   /**
-   * Load a vacancy by id with its description (if present) in a single call, since description is
-   * fetched EAGER.
-   *
-   * @param id the vacancy id
-   * @return the vacancy, or empty if not found
+   * Load a vacancy of a company with its description (if present) in a single call, since
+   * description is fetched EAGER. The company filter is part of the query, so a vacancy of another
+   * company is never loaded.
    */
   @Override
-  public Optional<Vacancy> findById(UUID id) {
-    return jpaRepository.findById(id).map(jpaMapper::toDomain);
+  public Optional<Vacancy> findByIdAndCompanyId(UUID id, UUID companyId) {
+    return jpaRepository.findByIdAndCompanyId(id, companyId).map(jpaMapper::toDomain);
+  }
+
+  @Override
+  public boolean existsByIdAndCompanyId(UUID id, UUID companyId) {
+    return jpaRepository.existsByIdAndCompanyId(id, companyId);
   }
 }

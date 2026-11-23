@@ -26,7 +26,7 @@ public class UpdateVacancyService implements UpdateVacancyUseCase {
   @Override
   @Transactional
   public Vacancy updateVacancy(UpdateVacancyCommand command) {
-    Vacancy vacancy = getVacancy(command.vacancyId());
+    Vacancy vacancy = getVacancy(command.vacancyId(), command.companyId());
 
     applyChanges(command, vacancy);
 
@@ -36,9 +36,9 @@ public class UpdateVacancyService implements UpdateVacancyUseCase {
     return vacancy;
   }
 
-  private Vacancy getVacancy(UUID vacancyId) {
+  private Vacancy getVacancy(UUID vacancyId, UUID companyId) {
     return vacancyRepository
-        .findById(vacancyId)
+        .findByIdAndCompanyId(vacancyId, companyId)
         .orElseThrow(() -> new VacancyNotFoundException(vacancyId));
   }
 

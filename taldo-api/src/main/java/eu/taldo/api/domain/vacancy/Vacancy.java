@@ -18,6 +18,7 @@ import java.util.UUID;
 public class Vacancy extends BaseObject {
 
   private final UUID id;
+  private final UUID companyId;
   private final Long version;
   private String jobTitle;
   private Language language;
@@ -32,6 +33,7 @@ public class Vacancy extends BaseObject {
 
   private Vacancy(
       UUID id,
+      UUID companyId,
       Long version,
       String jobTitle,
       Language language,
@@ -46,6 +48,7 @@ public class Vacancy extends BaseObject {
       LocalDateTime createdAt) {
     super(createdAt);
     this.id = id;
+    this.companyId = companyId;
     this.version = version;
     this.jobTitle = jobTitle;
     this.language = language;
@@ -61,6 +64,14 @@ public class Vacancy extends BaseObject {
 
   public UUID getId() {
     return id;
+  }
+
+  /**
+   * The company the vacancy belongs to. Fixed when the vacancy is created and never changed: only
+   * users of this company may read or change it (ADR 0006, revision 2026-11-21, point 4).
+   */
+  public UUID getCompanyId() {
+    return companyId;
   }
 
   /**
@@ -174,6 +185,8 @@ public class Vacancy extends BaseObject {
     return "Vacancy{"
         + "id="
         + id
+        + ", companyId="
+        + companyId
         + ", jobTitle='"
         + jobTitle
         + '\''
@@ -194,6 +207,7 @@ public class Vacancy extends BaseObject {
 
   public static class Builder {
     private UUID explicitId;
+    private UUID companyId;
     private Long version;
     private String jobTitle;
     private Language language;
@@ -211,6 +225,11 @@ public class Vacancy extends BaseObject {
 
     public Builder id(UUID id) {
       this.explicitId = id;
+      return this;
+    }
+
+    public Builder companyId(UUID companyId) {
+      this.companyId = companyId;
       return this;
     }
 
@@ -278,6 +297,7 @@ public class Vacancy extends BaseObject {
       UUID id = explicitId != null ? explicitId : UuidV7Generator.getUUID();
       return new Vacancy(
           id,
+          Objects.requireNonNull(companyId, "companyId is required"),
           version,
           Objects.requireNonNull(jobTitle, "jobTitle is required"),
           Objects.requireNonNull(language, "language is required"),

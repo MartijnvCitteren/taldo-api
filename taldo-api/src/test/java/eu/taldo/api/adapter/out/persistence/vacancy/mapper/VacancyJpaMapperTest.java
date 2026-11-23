@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
+import eu.taldo.api.adapter.out.persistence.identity.CompanyJpaEntity;
 import eu.taldo.api.adapter.out.persistence.vacancy.VacancyDescriptionJpaEntity;
 import eu.taldo.api.adapter.out.persistence.vacancy.VacancyJpaEntity;
 import eu.taldo.api.domain.vacancy.valueobject.ContactPerson;
@@ -42,6 +43,7 @@ class VacancyJpaMapperTest {
     assertEquals(vacancy.getWorkplaceType(), result.getWorkplaceType());
     assertEquals(vacancy.getHoursPerWeek(), result.getHoursPerWeek());
     assertEquals(vacancy.getStatus(), result.getStatus());
+    assertNull(result.getCompany());
   }
 
   @Test
@@ -56,7 +58,7 @@ class VacancyJpaMapperTest {
           + " the description")
   void givenVacancyEntityWithDescriptionWhenToDomainThenMapsEveryFieldIncludingDescription() {
     var vacancy = VacancyFactory.getFilledCoreVacancy().build();
-    var vacancyEntity = mapper.toJpaEntity(vacancy);
+    var vacancyEntity = withCompany(mapper.toJpaEntity(vacancy));
     vacancyEntity.setVersion(3L);
     var descriptionEntity = new VacancyDescriptionJpaEntity();
     vacancyEntity.setDescription(descriptionEntity);
@@ -89,7 +91,7 @@ class VacancyJpaMapperTest {
   @DisplayName("given vacancy entity with no description, when toDomain then description is null")
   void givenVacancyEntityWithNoDescriptionWhenToDomainThenDescriptionIsNull() {
     var vacancy = VacancyFactory.getFilledCoreVacancy().build();
-    var vacancyEntity = mapper.toJpaEntity(vacancy);
+    var vacancyEntity = withCompany(mapper.toJpaEntity(vacancy));
 
     var result = mapper.toDomain(vacancyEntity);
 
@@ -132,7 +134,7 @@ class VacancyJpaMapperTest {
             .contactPerson(VacancyFactory.CONTACT_PERSON)
             .offer(VacancyFactory.OFFER)
             .build();
-    var vacancyEntity = mapper.toJpaEntity(vacancy);
+    var vacancyEntity = withCompany(mapper.toJpaEntity(vacancy));
 
     var result = mapper.toDomain(vacancyEntity);
 
@@ -149,7 +151,7 @@ class VacancyJpaMapperTest {
     var withoutPhone = new ContactPerson(contactPerson.name(), null, null, contactPerson.email());
     var vacancy = VacancyFactory.getFilledCoreVacancy().contactPerson(withoutPhone).build();
 
-    var result = mapper.toDomain(mapper.toJpaEntity(vacancy));
+    var result = mapper.toDomain(withCompany(mapper.toJpaEntity(vacancy)));
 
     assertEquals(withoutPhone, result.getContactPerson());
   }
@@ -159,10 +161,31 @@ class VacancyJpaMapperTest {
       "given a vacancy entity without contact person columns, when toDomain then the contact"
           + " person is null")
   void givenVacancyEntityWithoutContactPersonColumnsWhenToDomainThenContactPersonIsNull() {
-    var vacancyEntity = mapper.toJpaEntity(VacancyFactory.getFilledCoreVacancy().build());
+    var vacancyEntity =
+        withCompany(mapper.toJpaEntity(VacancyFactory.getFilledCoreVacancy().build()));
 
     var result = mapper.toDomain(vacancyEntity);
 
     assertNull(result.getContactPerson());
+  }
+
+  @Test
+  @DisplayName(
+      "given a vacancy entity of a company, when toDomain then the vacancy has that company")
+  void givenVacancyEntityOfCompanyWhenToDomainThenVacancyHasThatCompany() {
+    var vacancyEntity =
+        withCompany(mapper.toJpaEntity(VacancyFactory.getFilledCoreVacancy().build()));
+
+    var result = mapper.toDomain(vacancyEntity);
+
+    assertEquals(vacancyEntity.getCompany().getId(), result.getCompanyId());
+  }
+
+  /** Sets the company the way the repository adapter does; the mapper leaves it out. */
+  private static VacancyJpaEntity withCompany(VacancyJpaEntity vacancyEntity) {
+    var company = new CompanyJpaEntity();
+    company.setId(VacancyFactory.COMPANY_ID);
+    vacancyEntity.setCompany(company);
+    return vacancyEntity;
   }
 }

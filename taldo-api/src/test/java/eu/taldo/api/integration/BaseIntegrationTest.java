@@ -22,7 +22,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * <p>Everything inside the application is real. Only the world outside it is replaced: Mistral and
  * Keycloak by WireMock ({@code MistralStub}, {@code KeycloakStub}), so no test ever calls an AI
  * provider or an identity provider. Every endpoint needs an access token, so the stub realm serves
- * its signing key before each test; tests sign their tokens with it ({@code AcmeAccounts}, {@code
+ * its signing key before each test; tests sign their tokens with it ({@code SeededAccounts}, {@code
  * KeycloakStub}). {@code @Async} work runs to completion before the request returns ({@link
  * SynchronousAsyncConfig}). Declared here rather than per test class so every integration test
  * shares one application context.

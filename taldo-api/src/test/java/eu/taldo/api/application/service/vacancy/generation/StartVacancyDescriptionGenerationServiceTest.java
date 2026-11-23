@@ -1,5 +1,6 @@
 package eu.taldo.api.application.service.vacancy.generation;
 
+import static eu.taldo.api.testSupport.VacancyFactory.COMPANY_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -46,7 +47,8 @@ class StartVacancyDescriptionGenerationServiceTest {
           + " announced")
   void givenExistingVacancyWhenStartThenGenerationRequestedNowSavedAndAnnounced() {
     var vacancy = VacancyFactory.getFilledCoreVacancy().build();
-    when(vacancyRepository.findById(vacancy.getId())).thenReturn(Optional.of(vacancy));
+    when(vacancyRepository.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID))
+        .thenReturn(Optional.of(vacancy));
 
     var pendingGeneration = service.start(commandFor(vacancy.getId()));
 
@@ -60,7 +62,8 @@ class StartVacancyDescriptionGenerationServiceTest {
   @DisplayName("given an unknown vacancy, when start then throws and nothing is saved or announced")
   void givenUnknownVacancyWhenStartThenThrowsAndNothingSaved() {
     var vacancyId = UUID.randomUUID();
-    when(vacancyRepository.findById(vacancyId)).thenReturn(Optional.empty());
+    when(vacancyRepository.findByIdAndCompanyId(vacancyId, COMPANY_ID))
+        .thenReturn(Optional.empty());
     var command = commandFor(vacancyId);
 
     assertThrows(VacancyNotFoundException.class, () -> service.start(command));
@@ -71,6 +74,7 @@ class StartVacancyDescriptionGenerationServiceTest {
 
   private static StartVacancyDescriptionGenerationCommand commandFor(UUID vacancyId) {
     return StartVacancyDescriptionGenerationCommand.builder()
+        .companyId(COMPANY_ID)
         .vacancyId(vacancyId)
         .mostImportantTasks("Tasks")
         .team("Team")

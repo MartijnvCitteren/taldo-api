@@ -68,7 +68,11 @@ GET /vacancy/{id}/generate-description/{generationId}
   that was just started.
 - If the generator throws despite its contract, the generation is recorded as `PROVIDER_ERROR` rather than left
   `PENDING`.
-- A generation is only readable through the vacancy it was started for.
+- A generation is only readable through the vacancy it was started for, and that vacancy only by its own company:
+  starting and polling load the vacancy with the acting user's company id (`404` otherwise, also for a vacancy of
+  another company). The poll checks the vacancy with `existsByIdAndCompanyId` before it looks up the generation, so
+  a frequent poll does not load the whole vacancy. The background completion needs no company: it works on a
+  generation id the start already checked.
 - One exception per response (`VacancyDescriptionGenerationRejectedException` → 422,
   `…UnavailableException` → 503, `…FailedException` → 500, `…NotFoundException` → 404).
   `GenerationExceptionHandler` only maps them, with a fixed title and detail per status from `Constants`; the failure
@@ -158,8 +162,8 @@ job title and language are copies of vacancy fields.
 
 ## Known gaps
 
-- No rate limiting or authentication on the endpoint (waits for login), so the application must not be exposed
-  publicly with a real `MISTRAL_API_KEY`.
+- No rate limiting on the endpoint: any active user can start generations as often as they like, and every one is a
+  paid Mistral call.
 - The application does not start without `MISTRAL_API_KEY`; there is no stub generator for running without a key.
 - No audit trail of generations beyond the 32-hour retention. Vacancy text is not a candidate decision; the audit trail
   is designed with candidate matching (epic 5).

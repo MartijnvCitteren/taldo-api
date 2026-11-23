@@ -49,7 +49,7 @@ class VacancyTest {
 
     var exception = assertThrows(NullPointerException.class, builder::build);
 
-    assertEquals("jobTitle is required", exception.getMessage());
+    assertEquals("companyId is required", exception.getMessage());
   }
 
   @Test
@@ -57,6 +57,7 @@ class VacancyTest {
   void givenBuilderWithNoStatusWhenBuildThenStatusDefaultsToDraft() {
     var vacancy =
         Vacancy.builder()
+            .companyId(VacancyFactory.COMPANY_ID)
             .jobTitle("Backend Engineer")
             .language(Language.EN)
             .category(VacancyCategory.ENGINEERING)
@@ -77,6 +78,7 @@ class VacancyTest {
 
     var vacancy =
         Vacancy.builder()
+            .companyId(VacancyFactory.COMPANY_ID)
             .jobTitle("Sales Manager")
             .language(Language.NL)
             .category(VacancyCategory.SALES)
@@ -102,6 +104,7 @@ class VacancyTest {
   void givenBuilderWithoutCreatedAtWhenBuildThenThrowsNamingTheField() {
     var builder =
         Vacancy.builder()
+            .companyId(VacancyFactory.COMPANY_ID)
             .jobTitle("Backend Engineer")
             .language(Language.EN)
             .category(VacancyCategory.ENGINEERING)

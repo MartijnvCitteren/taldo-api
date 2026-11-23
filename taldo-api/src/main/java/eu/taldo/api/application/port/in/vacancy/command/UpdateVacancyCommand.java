@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
  */
 @Builder
 public record UpdateVacancyCommand(
+    UUID companyId,
     UUID vacancyId,
     @Nullable String jobTitle,
     @Nullable Language language,
@@ -29,9 +30,9 @@ public record UpdateVacancyCommand(
     @Nullable ContactPerson contactPerson,
     @Nullable Offer offer) {
 
-  /** Redacted to the id: the contact person is personal data and the description is long. */
+  /** Redacted to the ids: the contact person is personal data and the description is long. */
   @Override
   public String toString() {
-    return "UpdateVacancyCommand[vacancyId=" + vacancyId + "]";
+    return "UpdateVacancyCommand[companyId=" + companyId + ", vacancyId=" + vacancyId + "]";
   }
 }

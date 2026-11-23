@@ -1,6 +1,7 @@
 package eu.taldo.api.application.service.vacancy.generation;
 
 import eu.taldo.api.application.port.in.vacancy.generation.GetVacancyDescriptionGenerationUseCase;
+import eu.taldo.api.application.port.out.vacancy.VacancyRepository;
 import eu.taldo.api.application.port.out.vacancy.generation.VacancyDescriptionGenerationRepository;
 import eu.taldo.api.domain.vacancy.generation.VacancyDescriptionGeneration;
 import eu.taldo.api.domain.vacancy.generation.exception.VacancyDescriptionGenerationFailedException;
@@ -16,8 +17,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * Answers a poll. A generation is only found through the vacancy it was started for, so a
- * generation id cannot be used to read a draft via another vacancy's URL.
+ * Answers a poll. A generation is only found through the vacancy it was started for, and that
+ * vacancy only through its own company, so a generation id cannot be used to read a draft via
+ * another vacancy's URL or by another company. Both cases look like a generation that does not
+ * exist.
  *
  * <p>A failed generation is reported as an exception per kind of failure, so the REST adapter maps
  * each to its response without looking at the failure reason. A {@code PENDING} generation past its
@@ -28,14 +31,22 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class GetVacancyDescriptionGenerationService
     implements GetVacancyDescriptionGenerationUseCase {
+  private final VacancyRepository vacancyRepository;
   private final VacancyDescriptionGenerationRepository generationRepository;
   private final Clock clock;
 
   @Override
-  public VacancyDescriptionGeneration get(UUID vacancyId, UUID generationId) {
+  public VacancyDescriptionGeneration get(UUID companyId, UUID vacancyId, UUID generationId) {
+    throwIfVacancyNotOfCompany(companyId, vacancyId, generationId);
     var generation = getGenerationOfVacancy(vacancyId, generationId);
     throwIfFailed(generation);
     return generation;
+  }
+
+  private void throwIfVacancyNotOfCompany(UUID companyId, UUID vacancyId, UUID generationId) {
+    if (!vacancyRepository.existsByIdAndCompanyId(vacancyId, companyId)) {
+      throw new VacancyDescriptionGenerationNotFoundException(vacancyId, generationId);
+    }
   }
 
   private VacancyDescriptionGeneration getGenerationOfVacancy(UUID vacancyId, UUID generationId) {

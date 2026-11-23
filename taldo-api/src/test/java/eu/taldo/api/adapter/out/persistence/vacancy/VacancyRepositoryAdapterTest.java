@@ -1,6 +1,8 @@
 package eu.taldo.api.adapter.out.persistence.vacancy;
 
+import static eu.taldo.api.testSupport.VacancyFactory.COMPANY_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -10,7 +12,9 @@ import eu.taldo.api.adapter.out.persistence.vacancy.mapper.VacancyJpaMapperImpl;
 import eu.taldo.api.application.exception.VacancyModifiedConcurrentlyException;
 import eu.taldo.api.domain.vacancy.valueobject.VacancyDescription;
 import eu.taldo.api.domain.vacancy.valueobject.VacancyDescriptionSource;
+import eu.taldo.api.testSupport.SeededAccounts;
 import eu.taldo.api.testSupport.VacancyFactory;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,15 +22,19 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
 
 @ActiveProfiles("test")
 @DataJpaTest
+@Sql(SeededAccounts.SEED)
 @Import({
   VacancyRepositoryAdapter.class,
   VacancyJpaMapperImpl.class,
   VacancyDescriptionJpaMapperImpl.class
 })
 class VacancyRepositoryAdapterTest {
+  private static final UUID OTHER_COMPANY_ID =
+      UUID.fromString("0199c9a0-0000-7000-8000-00000000b001");
 
   @Autowired private VacancyRepositoryAdapter vacancyRepositoryAdapter;
   @Autowired private VacancyDescriptionJpaRepository descriptionJpaRepository;
@@ -48,7 +56,8 @@ class VacancyRepositoryAdapterTest {
     var vacancy = VacancyFactory.getFilledCoreVacancy().description(description).build();
 
     vacancyRepositoryAdapter.save(vacancy);
-    var reloaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var reloaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
 
     assertEquals(description, reloaded.getDescription());
     assertEquals(1, descriptionJpaRepository.findByVacancyId(vacancy.getId()).stream().count());
@@ -73,11 +82,13 @@ class VacancyRepositoryAdapterTest {
             null,
             null,
             VacancyDescriptionSource.MANUAL);
-    var loaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var loaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     loaded.setDescription(secondDescription);
     vacancyRepositoryAdapter.save(loaded);
 
-    var reloaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var reloaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     assertEquals(secondDescription, reloaded.getDescription());
     // With the shared-PK relation (ADR 0005), this also proves a structural guarantee: a second
     // row for the same vacancy is not representable, since the description row's PK is the
@@ -93,7 +104,8 @@ class VacancyRepositoryAdapterTest {
     var vacancy = VacancyFactory.getFilledCoreVacancy().build();
 
     vacancyRepositoryAdapter.save(vacancy);
-    var reloaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var reloaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
 
     assertNull(reloaded.getDescription());
     assertTrue(descriptionJpaRepository.findByVacancyId(vacancy.getId()).isEmpty());
@@ -109,7 +121,8 @@ class VacancyRepositoryAdapterTest {
     var vacancy = VacancyFactory.getFilledCoreVacancy().description(description).build();
     vacancyRepositoryAdapter.save(vacancy);
 
-    var loaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var loaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     loaded.setDescription(null);
     vacancyRepositoryAdapter.save(loaded);
     // Flush/clear required to bypass the persistence-context cache and verify the explicit
@@ -118,7 +131,8 @@ class VacancyRepositoryAdapterTest {
     entityManager.flush();
     entityManager.clear();
 
-    var reloaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var reloaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     assertNull(reloaded.getDescription());
     assertTrue(descriptionJpaRepository.findByVacancyId(vacancy.getId()).isEmpty());
   }
@@ -138,7 +152,8 @@ class VacancyRepositoryAdapterTest {
     entityManager.flush();
     entityManager.clear();
 
-    var reloaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var reloaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     assertEquals(vacancy.getContactPerson(), reloaded.getContactPerson());
     assertEquals(vacancy.getOffer(), reloaded.getOffer());
   }
@@ -154,7 +169,8 @@ class VacancyRepositoryAdapterTest {
     entityManager.flush();
     entityManager.clear();
 
-    var reloaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var reloaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     assertNull(reloaded.getContactPerson());
     assertNull(reloaded.getOffer());
   }
@@ -166,8 +182,10 @@ class VacancyRepositoryAdapterTest {
   void givenTwoCopiesAtSameVersionWhenBothSavedThenSecondSaveFailsAsConcurrentModification() {
     var vacancy = VacancyFactory.getFilledCoreVacancy().build();
     vacancyRepositoryAdapter.save(vacancy);
-    var firstCopy = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
-    var secondCopy = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var firstCopy =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
+    var secondCopy =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     firstCopy.setJobTitle("Account Manager");
     vacancyRepositoryAdapter.save(firstCopy);
     secondCopy.setJobTitle("Key Account Manager");
@@ -184,12 +202,14 @@ class VacancyRepositoryAdapterTest {
   void givenLoadedVacancyWhenChangedAndSavedThenReloadedVacancyHasNextVersion() {
     var vacancy = VacancyFactory.getFilledCoreVacancy().build();
     vacancyRepositoryAdapter.save(vacancy);
-    var loaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var loaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     loaded.setJobTitle("Account Manager");
 
     vacancyRepositoryAdapter.save(loaded);
 
-    var reloaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var reloaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     assertEquals(loaded.getVersion() + 1, reloaded.getVersion());
   }
 
@@ -212,7 +232,36 @@ class VacancyRepositoryAdapterTest {
     entityManager.flush();
     entityManager.clear();
 
-    var reloaded = vacancyRepositoryAdapter.findById(vacancy.getId()).orElseThrow();
+    var reloaded =
+        vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID).orElseThrow();
     assertEquals(description, reloaded.getDescription());
+  }
+
+  @Test
+  @DisplayName(
+      "given a saved vacancy, when found with another company then it is not found, and does not"
+          + " exist for that company")
+  void givenSavedVacancyWhenFoundWithAnotherCompanyThenNotFound() {
+    var vacancy = VacancyFactory.getFilledCoreVacancy().build();
+    vacancyRepositoryAdapter.save(vacancy);
+
+    var found = vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), OTHER_COMPANY_ID);
+
+    assertTrue(found.isEmpty());
+    assertFalse(vacancyRepositoryAdapter.existsByIdAndCompanyId(vacancy.getId(), OTHER_COMPANY_ID));
+  }
+
+  @Test
+  @DisplayName(
+      "given a saved vacancy, when found with its own company then it keeps that company, and"
+          + " exists for it")
+  void givenSavedVacancyWhenFoundWithItsOwnCompanyThenItKeepsThatCompany() {
+    var vacancy = VacancyFactory.getFilledCoreVacancy().build();
+    vacancyRepositoryAdapter.save(vacancy);
+
+    var found = vacancyRepositoryAdapter.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID);
+
+    assertEquals(COMPANY_ID, found.orElseThrow().getCompanyId());
+    assertTrue(vacancyRepositoryAdapter.existsByIdAndCompanyId(vacancy.getId(), COMPANY_ID));
   }
 }

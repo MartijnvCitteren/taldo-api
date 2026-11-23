@@ -1,7 +1,7 @@
 package eu.taldo.api.integration.vacancy.generation;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
+import static eu.taldo.api.testSupport.SeededAccounts.asAcmeOwner;
 
 import eu.taldo.api.vacancy.adapter.in.web.contract.VacancyDescriptionGeneration;
 import io.restassured.http.ContentType;

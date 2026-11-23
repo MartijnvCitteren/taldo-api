@@ -1,5 +1,6 @@
 package eu.taldo.api.application.service.vacancy;
 
+import static eu.taldo.api.testSupport.VacancyFactory.COMPANY_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -36,9 +37,11 @@ class SetManualVacancyDescriptionServiceTest {
           + " source manual and saved")
   void givenExistingVacancyWhenSetManualDescriptionThenDescriptionReplacedAndSaved() {
     var vacancy = VacancyFactory.getFilledCoreVacancy().build();
-    when(vacancyRepository.findById(vacancy.getId())).thenReturn(Optional.of(vacancy));
+    when(vacancyRepository.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID))
+        .thenReturn(Optional.of(vacancy));
     var command =
         SetManualVacancyDescriptionCommand.builder()
+            .companyId(COMPANY_ID)
             .vacancyId(vacancy.getId())
             .summary("Summary")
             .jobDescription("Job description")
@@ -63,8 +66,13 @@ class SetManualVacancyDescriptionServiceTest {
   @DisplayName("given an unknown vacancy id, when setManualDescription then throws and never saves")
   void givenUnknownVacancyIdWhenSetManualDescriptionThenThrowsAndNeverSaves() {
     var vacancyId = UUID.randomUUID();
-    when(vacancyRepository.findById(vacancyId)).thenReturn(Optional.empty());
-    var command = SetManualVacancyDescriptionCommand.builder().vacancyId(vacancyId).build();
+    when(vacancyRepository.findByIdAndCompanyId(vacancyId, COMPANY_ID))
+        .thenReturn(Optional.empty());
+    var command =
+        SetManualVacancyDescriptionCommand.builder()
+            .companyId(COMPANY_ID)
+            .vacancyId(vacancyId)
+            .build();
 
     assertThrows(VacancyNotFoundException.class, () -> service.setManualDescription(command));
 
@@ -77,8 +85,13 @@ class SetManualVacancyDescriptionServiceTest {
           + " propagates unmodified")
   void givenRepositorySaveFailsWhenSetManualDescriptionThenExceptionPropagates() {
     var vacancy = VacancyFactory.getFilledCoreVacancy().build();
-    when(vacancyRepository.findById(vacancy.getId())).thenReturn(Optional.of(vacancy));
-    var command = SetManualVacancyDescriptionCommand.builder().vacancyId(vacancy.getId()).build();
+    when(vacancyRepository.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID))
+        .thenReturn(Optional.of(vacancy));
+    var command =
+        SetManualVacancyDescriptionCommand.builder()
+            .companyId(COMPANY_ID)
+            .vacancyId(vacancy.getId())
+            .build();
     var failure = new RuntimeException("database is down");
     doThrow(failure).when(vacancyRepository).save(vacancy);
 

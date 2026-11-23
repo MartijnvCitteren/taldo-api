@@ -1,12 +1,12 @@
 package eu.taldo.api.integration.vacancy;
 
 import static eu.taldo.api.integration.IntegrationCommons.JSON_MAPPER;
-import static eu.taldo.api.testSupport.AcmeAccounts.asAcmeOwner;
+import static eu.taldo.api.testSupport.SeededAccounts.asAcmeOwner;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import eu.taldo.api.integration.BaseIntegrationTest;
-import eu.taldo.api.testSupport.AcmeAccounts;
+import eu.taldo.api.testSupport.SeededAccounts;
 import eu.taldo.api.vacancy.adapter.in.web.contract.ProblemDetails;
 import io.restassured.http.Method;
 import java.util.UUID;
@@ -22,7 +22,7 @@ import org.springframework.test.context.jdbc.Sql;
  * Every operation the contract declares but the controller does not implement yet must answer with
  * an explicit 501 problem response, never with an empty success.
  */
-@Sql(AcmeAccounts.SEED)
+@Sql(SeededAccounts.SEED)
 class VacancyNotImplementedIntegrationTest extends BaseIntegrationTest {
 
   private static final String PROBLEM_JSON = "application/problem+json";

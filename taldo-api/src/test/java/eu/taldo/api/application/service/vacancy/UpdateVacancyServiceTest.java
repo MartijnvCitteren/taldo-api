@@ -1,5 +1,6 @@
 package eu.taldo.api.application.service.vacancy;
 
+import static eu.taldo.api.testSupport.VacancyFactory.COMPANY_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -46,9 +47,11 @@ class UpdateVacancyServiceTest {
             .contactPerson(VacancyFactory.CONTACT_PERSON)
             .offer(VacancyFactory.OFFER)
             .build();
-    when(vacancyRepository.findById(vacancy.getId())).thenReturn(Optional.of(vacancy));
+    when(vacancyRepository.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID))
+        .thenReturn(Optional.of(vacancy));
     var command =
         UpdateVacancyCommand.builder()
+            .companyId(COMPANY_ID)
             .vacancyId(vacancy.getId())
             .jobTitle("Senior Sales Manager")
             .language(Language.DE)
@@ -88,9 +91,11 @@ class UpdateVacancyServiceTest {
             .contactPerson(VacancyFactory.CONTACT_PERSON)
             .offer(VacancyFactory.OFFER)
             .build();
-    when(vacancyRepository.findById(vacancy.getId())).thenReturn(Optional.of(vacancy));
+    when(vacancyRepository.findByIdAndCompanyId(vacancy.getId(), COMPANY_ID))
+        .thenReturn(Optional.of(vacancy));
     var command =
         UpdateVacancyCommand.builder()
+            .companyId(COMPANY_ID)
             .vacancyId(vacancy.getId())
             .jobTitle("Senior Sales Manager")
             .build();
@@ -111,8 +116,9 @@ class UpdateVacancyServiceTest {
   @DisplayName("given an unknown vacancy id, when updateVacancy then throws and never saves")
   void givenUnknownVacancyIdWhenUpdateVacancyThenThrowsAndNeverSaves() {
     var vacancyId = UUID.randomUUID();
-    when(vacancyRepository.findById(vacancyId)).thenReturn(Optional.empty());
-    var command = UpdateVacancyCommand.builder().vacancyId(vacancyId).build();
+    when(vacancyRepository.findByIdAndCompanyId(vacancyId, COMPANY_ID))
+        .thenReturn(Optional.empty());
+    var command = UpdateVacancyCommand.builder().companyId(COMPANY_ID).vacancyId(vacancyId).build();
 
     assertThrows(VacancyNotFoundException.class, () -> service.updateVacancy(command));
 
