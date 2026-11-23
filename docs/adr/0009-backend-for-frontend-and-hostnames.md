@@ -36,7 +36,9 @@ A third Maven module, a small Spring Boot application with no business logic and
   opaque session cookie.
 - **Relay:** every API call from the browser goes to the BFF, which adds the user's access token and forwards it to
   taldo-api. It renews the access token with the refresh token when needed.
-- **Logout** ends the BFF session and the Keycloak session (RP-initiated logout).
+- **Logout** ends the BFF session and the Keycloak session (RP-initiated logout). The frontend calls it with
+  `fetch`, because it needs the CSRF header, so the BFF answers the Keycloak logout URL as JSON instead of
+  redirecting to it, and the frontend navigates there (revised while building, see `docs/application/bff.md`).
 - **CSRF:** the session is a cookie, so every state-changing request needs a CSRF token (Spring Security's cookie-to-
   header pattern), also with `SameSite=Strict` (section 3).
 
@@ -136,6 +138,9 @@ server only, rotation adds less than it does in a browser.
 - The public client disappears from every environment except local, where a `taldo-dev` client lets a developer get a
   token for Swagger UI or Postman. As long as a public client exists in an environment, anyone can obtain a token in a
   browser there, which is what the BFF exists to prevent.
+- **Transition:** `taldo-dev` gets exactly the settings the public `taldo-web` had, so the current frontend keeps
+  logging in with `keycloak-js` by changing only its `clientId`, until it switches to the BFF. No other environment
+  exists yet, so no production realm ever has a public client.
 
 ## Consequences
 

@@ -8,6 +8,7 @@ This describes what is on `main` — plans and roadmap live in `.claude/CLAUDE.m
 | Module | Role |
 |--------|------|
 | `taldo-contracts` | OpenAPI specs, the source of truth for the HTTP API: `VacancyApi.yml` and `IdentityApi.yml`. Consumed by the frontend team. |
+| `taldo-bff` | The backend-for-frontend (ADR 0009): the browser's login and server-side session; see [bff](bff.md). |
 | `taldo-api` | The Spring Boot application. Generates the API interfaces and models from each contract at build time, one generator execution per contract (`eu.taldo.api.vacancy.adapter…`, `eu.taldo.api.identity.adapter…`). The vacancy contract gets one interface per OpenAPI tag (`VacancyApi`, `GenerationApi`). |
 
 Hand-written code is grouped per business module (ADR 0008), each holding one or more aggregates:
@@ -132,8 +133,8 @@ The response goes back up the same way: domain object ─▶ response mapper ─
 
   | Service | Port | Role |
   |---------|------|------|
-  | `postgres` (+ one-shot `postgres-init`) | 5433 | PostgreSQL 17, the newest major version Scaleway's managed database offers (ADR 0007). Databases `taldo_db` (the application, `local` profile) and `keycloak_db`, both UTF-8. User `postgres`, password `Super_secret-123` (local only). Host port 5433 because a PostgreSQL installed on the host often holds 5432. |
-  | `keycloak` | 8080 | Identity provider (ADR 0006), admin console with `admin`/`admin`. Realm `taldo` with clients `taldo-web` and `taldo-backend`, imported from `docker/keycloak/taldo-realm.json`. The backend calls its Admin API as `taldo-backend`. |
+  | `postgres` (+ one-shot `postgres-init`) | 5433 | PostgreSQL 17, the newest major version Scaleway's managed database offers (ADR 0007). Databases `taldo_db` (the application, `local` profile), `keycloak_db` and `taldo_bff_db` (the BFF's sessions), all UTF-8. User `postgres`, password `Super_secret-123` (local only). Host port 5433 because a PostgreSQL installed on the host often holds 5432. |
+  | `keycloak` | 8080 | Identity provider (ADR 0006), admin console with `admin`/`admin`. Realm `taldo` with clients `taldo-web` (confidential, the BFF), `taldo-dev` (public, local only) and `taldo-backend`, imported from `docker/keycloak/taldo-realm.json`. The backend calls its Admin API as `taldo-backend`. |
   | `keycloak-config` (one-shot) | – | Applies the realm settings the import cannot express (`docker/keycloak/configure-realm.sh`), including the token and session lifetimes from `KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS` (default 600), `KEYCLOAK_SSO_SESSION_IDLE_SECONDS` (default 86400) and `KEYCLOAK_SSO_SESSION_MAX_SECONDS` (default 129600). |
   | `mailpit` | 8025 | Catches the mails Keycloak sends; web UI on `http://localhost:8025`. |
 

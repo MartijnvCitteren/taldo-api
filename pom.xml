@@ -12,6 +12,7 @@
 
 	<modules>
 		<module>taldo-api</module>
+		<module>taldo-bff</module>
 		<module>taldo-contracts</module>
 	</modules>
 
