@@ -3,6 +3,12 @@ server:
   # Behind the reverse proxy (or the Vite dev server) that serves the frontend on the same origin
   # (ADR 0009, section 3): login redirects and the callback URL use the browser's host, not ours.
   forward-headers-strategy: framework
+  tomcat:
+    servlet:
+      # Redirects of our own (after login: Location "/") stay relative, so the browser resolves
+      # them against the host it is on and they never depend on forwarded headers. Spring Boot's
+      # default since 4.2; set here so a change of default cannot flip it silently.
+      use-relative-redirects: true
   servlet:
     session:
       # The session id is the only thing the browser holds. __Host- makes the browser refuse the

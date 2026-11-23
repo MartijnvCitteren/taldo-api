@@ -63,7 +63,9 @@ path with the raw query, and passes taldo-api's answer back as it is: status, bo
 - **CSRF**: Spring Security's single-page-app setup (`csrf.spa()`): the token is in the readable `XSRF-TOKEN` cookie
   and goes back in the `X-XSRF-TOKEN` header on every state-changing request.
 - `server.forward-headers-strategy: framework`: behind the reverse proxy or the Vite dev server, the callback URL and
-  redirects use the browser's host.
+  the logout URL use the browser's host.
+- `server.tomcat.servlet.use-relative-redirects: true`: our own redirects (`/` after login) are a relative `Location`,
+  which the browser resolves against the host it is on.
 
 ## Configuration
 
