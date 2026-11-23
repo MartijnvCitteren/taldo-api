@@ -3,6 +3,7 @@ package eu.taldo.api.adapter.out.keycloak;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -73,9 +74,18 @@ class KeycloakAdminClientConfig {
     return interceptor;
   }
 
-  /** Spring Security's token client, with the converters and error handler it uses by default. */
+  /**
+   * Spring Security's token client, with the converters and error handler it uses by default.
+   *
+   * <p>The error handler is registered through the {@link RestClient.ResponseSpec.ErrorHandler}
+   * variant: the {@code ResponseErrorHandler} one Spring Security still uses is deprecated for
+   * removal since Spring Framework 7.1. Matching {@link HttpStatusCode#isError()} is what that
+   * handler's {@code hasError} checks, so the behaviour stays the same: an OAuth2 error from
+   * Keycloak becomes an {@code OAuth2AuthorizationException}.
+   */
   private static RestClientClientCredentialsTokenResponseClient tokenResponseClient(
       RestClient.Builder restClientBuilder) {
+    var oauth2ErrorHandler = new OAuth2ErrorResponseErrorHandler();
     var tokenClient = new RestClientClientCredentialsTokenResponseClient();
     tokenClient.setRestClient(
         restClientBuilder
@@ -84,7 +94,10 @@ class KeycloakAdminClientConfig {
               converters.addCustomConverter(new FormHttpMessageConverter());
               converters.addCustomConverter(new OAuth2AccessTokenResponseHttpMessageConverter());
             })
-            .defaultStatusHandler(new OAuth2ErrorResponseErrorHandler())
+            .defaultStatusHandler(
+                HttpStatusCode::isError,
+                (request, response) ->
+                    oauth2ErrorHandler.handleError(request.getURI(), request.getMethod(), response))
             .build());
     return tokenClient;
   }

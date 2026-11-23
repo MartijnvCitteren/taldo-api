@@ -13,6 +13,7 @@ import static eu.taldo.bff.KeycloakStub.KEYCLOAK_WIREMOCK;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -59,10 +60,7 @@ class LoginIntegrationTest extends BffIntegrationTest {
 
     var callback = finishLogin(login, 600);
 
-    callback
-        .then()
-        .statusCode(HttpStatus.FOUND.value())
-        .header("Location", endsWith(":" + port + "/"));
+    callback.then().statusCode(HttpStatus.FOUND.value()).header("Location", equalTo("/"));
     assertNotEquals(loginSession, callback.getCookie(SESSION_COOKIE));
     KEYCLOAK_WIREMOCK.verify(
         postRequestedFor(urlEqualTo(KeycloakStub.TOKEN_PATH))
