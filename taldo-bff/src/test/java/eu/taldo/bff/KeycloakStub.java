@@ -1,6 +1,7 @@
 package eu.taldo.bff;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
@@ -65,12 +66,13 @@ final class KeycloakStub {
   }
 
   /**
-   * Lets the token endpoint exchange any code for an access token and an ID token carrying the
-   * nonce of the login it belongs to.
+   * Lets the token endpoint exchange any code for an access token, valid for the given number of
+   * seconds, and an ID token carrying the nonce of the login it belongs to.
    */
-  static void stubTokenEndpoint(String nonce, String accessToken) {
+  static void stubTokenEndpoint(String nonce, String accessToken, int expiresInSeconds) {
     KEYCLOAK_WIREMOCK.stubFor(
         post(TOKEN_PATH)
+            .withRequestBody(containing("grant_type=authorization_code"))
             .willReturn(
                 json(
                     Map.of(
@@ -83,9 +85,48 @@ final class KeycloakStub {
                         "token_type",
                         "Bearer",
                         "expires_in",
-                        600,
+                        expiresInSeconds,
                         "scope",
                         "openid"))));
+  }
+
+  /** Lets the token endpoint renew the tokens with the refresh token. */
+  static void stubRefresh(String newAccessToken) {
+    KEYCLOAK_WIREMOCK.stubFor(
+        post(TOKEN_PATH)
+            .withRequestBody(containing("grant_type=refresh_token"))
+            .willReturn(
+                json(
+                    Map.of(
+                        "access_token",
+                        newAccessToken,
+                        "refresh_token",
+                        "renewed-refresh-token",
+                        "token_type",
+                        "Bearer",
+                        "expires_in",
+                        600))));
+  }
+
+  /** Lets the token endpoint answer a refresh as Keycloak does once its session has ended. */
+  static void stubRefreshRefused() {
+    KEYCLOAK_WIREMOCK.stubFor(
+        post(TOKEN_PATH)
+            .withRequestBody(containing("grant_type=refresh_token"))
+            .willReturn(
+                aResponse()
+                    .withStatus(400)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        "{\"error\":\"invalid_grant\",\"error_description\":\"Session not active\"}")));
+  }
+
+  /** Lets the token endpoint fail on a refresh, as when Keycloak is down. */
+  static void stubRefreshUnavailable() {
+    KEYCLOAK_WIREMOCK.stubFor(
+        post(TOKEN_PATH)
+            .withRequestBody(containing("grant_type=refresh_token"))
+            .willReturn(aResponse().withStatus(503)));
   }
 
   private static String idToken(String nonce) {

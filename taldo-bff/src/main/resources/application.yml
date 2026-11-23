@@ -21,6 +21,15 @@ spring:
     virtual:
       enabled: true
 
+  # Calls to taldo-api: one attempt may wait for at most 15 seconds, like taldo-api's own outbound
+  # calls. The JDK client reports a timeout as an I/O error, which the relay answers with 502.
+  http:
+    clients:
+      connect-timeout: 5s
+      read-timeout: 15s
+      imperative:
+        factory: jdk
+
   # Sessions live in PostgreSQL, so every instance sees them and a restart keeps users logged in.
   # The idle timeout matches Keycloak's SSO session idle (ADR 0006, revision 2026-11-21, point 6):
   # set both from the same value. Keycloak's 36-hour maximum ends the session through the refresh
@@ -52,6 +61,11 @@ spring:
           keycloak:
             issuer-uri: ${KEYCLOAK_ISSUER_URI}
             user-name-attribute: sub
+
+taldo:
+  api:
+    # taldo-api as the BFF reaches it, without its context path; in production a private address.
+    base-url: ${TALDO_API_BASE_URL}
 
 logging:
   level:
