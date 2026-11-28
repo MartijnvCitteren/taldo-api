@@ -1,0 +1,36 @@
+# The public entry point of an environment (ADR 0009, section 3; ADR 0010): one origin for the browser. The paths of
+# the BFF go to the BFF, everything else is the frontend's static files (for now a placeholder page).
+#
+# TLS ends at the platform's gateway, which forwards plain HTTP; this server never terminates TLS itself.
+{
+	admin off
+	persist_config off
+	auto_https off
+}
+
+:{$PORT:8080} {
+	@bff path /api/v1/* /login /login/callback /logout
+	handle @bff {
+		reverse_proxy {$TALDO_BFF_URL} {
+			# The BFF's private endpoint is addressed by its own host name. The browser's host and scheme go along
+			# as X-Forwarded-*, from which the BFF builds the login callback and the logout URL.
+			header_up Host {upstream_hostport}
+			header_up X-Forwarded-Host {hostport}
+			header_up X-Forwarded-Proto {$PUBLIC_SCHEME:https}
+		}
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Content-Security-Policy "default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+}

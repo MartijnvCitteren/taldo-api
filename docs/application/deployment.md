@@ -1,7 +1,8 @@
 # Deployment
 
-How taldo-api, taldo-bff and Keycloak are packaged and configured outside a developer's machine. Where they run is decided in
-ADR 0010 (the test environment on Scaleway); this page covers what the code provides for any host.
+How taldo-api, taldo-bff, Keycloak and the entry point are packaged and configured outside a developer's machine. Where they run is decided in
+ADR 0010 (the test environment on Scaleway); this page covers what the code provides for any host. Setting up the test environment step by step:
+[the runbook](../runbook/scaleway-test-environment.md).
 
 ## One image per application, the same in every environment
 
@@ -110,6 +111,39 @@ redirect URIs), still reaches a public HTTPS endpoint, sends mail through the co
 second on `SIGTERM`. Without the CA it does not start (`PKIX path building failed`); with a lifetime missing,
 `configure-realm.sh` fails and the container stops.
 
+## Entry point
+
+`docker/entry/Dockerfile` builds the public entry point: Caddy, giving the browser one origin for the frontend and the
+BFF (ADR 0009, section 3). `/api/v1/*`, `/login`, `/login/callback` and `/logout` go to the BFF; every other path is a
+static file from `/srv`, with `index.html` for paths that are no file (a single-page app's routes).
+
+```
+docker build --platform linux/amd64 -f docker/entry/Dockerfile -t taldo-entry .
+```
+
+- **Placeholder**: until the frontend is deployed, `/srv` holds a page that calls `GET /api/v1/me` and shows whether the
+  browser is logged in, with a login link and a logout button that works like the frontend's. It checks the whole
+  chain: entry point, BFF, Keycloak and taldo-api.
+- **To the BFF**: `Host` is the BFF's own host name (its private endpoint is addressed by name); the browser's host and
+  scheme go in `X-Forwarded-Host` and `X-Forwarded-Proto`, from which the BFF builds the login callback and the logout
+  URL. The scheme is `https` (TLS ends at the platform's gateway), or `PUBLIC_SCHEME` when set.
+- **Response headers** on everything, the BFF's answers included: a strict `Content-Security-Policy` (`default-src
+  'self'`, no framing), HSTS, `nosniff`, `Referrer-Policy: no-referrer`, no `Server`. The frontend may need a wider
+  CSP when it moves in.
+- No access log (the callback's query holds the authorization code), no admin API, no TLS of its own. Runs as the
+  system user `taldo` on port 8080 (`PORT`).
+
+| Variable | Notes |
+|----------|-------|
+| `TALDO_BFF_URL` | Required. The BFF's private endpoint, `https://<container-id>.<private-network-id>.internal`. |
+| `TRUSTED_CA_CERTS_BASE64` | As for the other images; here the CA of the private endpoints. Caddy (Go) reads it through `SSL_CERT_DIR`, next to the system's CAs. |
+| `PUBLIC_SCHEME` | `https` by default; `http` only for a local check. |
+
+Verified locally: to an HTTPS upstream with a certificate from a private CA, requests arrive with the upstream's host
+name and the browser's host and scheme in `X-Forwarded-*`; without the CA the answer is `502`. In front of the BFF
+(from the IDE, with the local Keycloak): a full login through the entry point, `GET /api/v1/me` relayed to taldo-api,
+and logout with the CSRF header.
+
 ## Running the images locally
 
 `docker compose --profile apps up --build` builds both images from the jars in `target/` and runs them against the
@@ -125,6 +159,6 @@ server with the applications on the `local` profile.
   admin host name or network is not set up.
 - The realm is imported on the first start only: a later change to the realm file or to its placeholders needs the
   admin console or a new import.
-- There is no entry point yet that serves the frontend and the BFF on one origin (ADR 0009, section 3).
+- The entry point serves a placeholder: the frontend is not deployed yet.
 - No HTTP health endpoint: the platform sees an application as ready once its port accepts connections, which Spring
   Boot opens only after the context has started.
