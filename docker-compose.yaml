@@ -106,6 +106,58 @@ services:
     ports:
       - "8025:8025"
 
+  # The applications as the images a hosted environment runs (docker/java/Dockerfile), started only with the apps
+  # profile. Build the jars first, then:
+  #
+  #   ./mvnw package && docker compose --profile apps up --build
+  #
+  # They take the place of running taldo-api and taldo-bff from the IDE (same ports). Use them to check an image
+  # before pushing it: the applications start, reach PostgreSQL and Keycloak, and the BFF relays to taldo-api. A
+  # browser login does not work this way: the BFF reaches Keycloak as keycloak:8080, an address the browser cannot
+  # open. For login, run the applications on the local profile behind the Vite dev server (docs/application/bff.md).
+  taldo-api:
+    profiles: [ apps ]
+    build:
+      context: .
+      dockerfile: docker/java/Dockerfile
+      args:
+        MODULE: taldo-api
+    depends_on:
+      keycloak-config:
+        condition: service_completed_successfully
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/taldo_db"
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "Super_secret-123"
+      KEYCLOAK_BASE_URL: "http://keycloak:8080"
+      KEYCLOAK_CLIENT_SECRET: ${TALDO_BACKEND_CLIENT_SECRET:-local-only-backend-secret}
+      # Generating vacancy texts needs a real key; without one the application starts and generation fails.
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-no-key-set}
+    ports:
+      - "8090:8090"
+
+  taldo-bff:
+    profiles: [ apps ]
+    build:
+      context: .
+      dockerfile: docker/java/Dockerfile
+      args:
+        MODULE: taldo-bff
+    depends_on:
+      keycloak-config:
+        condition: service_completed_successfully
+      taldo-api:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/taldo_bff_db"
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "Super_secret-123"
+      KEYCLOAK_ISSUER_URI: "http://keycloak:8080/realms/taldo"
+      KEYCLOAK_CLIENT_SECRET: ${TALDO_WEB_CLIENT_SECRET:-local-only-web-secret}
+      TALDO_API_BASE_URL: "http://taldo-api:8090"
+    ports:
+      - "8081:8081"
+
 volumes:
   postgresdata:
     name: taldo-postgresdata

@@ -1,6 +1,6 @@
 # ADR 0009 — A backend-for-frontend keeps tokens out of the browser
 
-- **Status:** Accepted; the hostname of the test environment is open (section 4)
+- **Status:** Accepted; section 4 revised by ADR 0010 (test hostnames)
 - **Date:** 2026-11-21
 - **Supersedes:** the public client `taldo-web` of ADR 0006, section 8, and the frontend's part of ADR 0006, section 2
   (the browser logs in with authorization code + PKCE and holds the tokens).
@@ -100,8 +100,8 @@ Keycloak (section 4).
 | | Local | Test | Production |
 |---|---|---|---|
 | Marketing site | – | – | `taldo.eu` |
-| Frontend + BFF | `localhost:5173` | open | `app.taldo.eu` |
-| Keycloak | `localhost:8080` | open | `auth.taldo.eu` |
+| Frontend + BFF | `localhost:5173` | `app.test.taldo.eu` | `app.taldo.eu` |
+| Keycloak | `localhost:8080` | `auth.test.taldo.eu` | `auth.taldo.eu` |
 | taldo-api | `localhost:8090` | private network | private network |
 
 - **Keycloak on `auth.taldo.eu`:** users see it on the login page, it is the issuer in every token and, later, the
@@ -118,6 +118,10 @@ Keycloak (section 4).
     wildcard whose key would also be valid for production.
 
   Advised: a separate domain. Decided when the test environment is built.
+
+  *Revised 2026-11-28 (ADR 0010):* the maintainer chose the subzone, `app.test.taldo.eu` and `auth.test.taldo.eu`,
+  and accepted the same-site risk while test holds no customer data. The options above stay as the record of why a
+  separate domain is the stronger choice.
 - If the marketing site runs on an external CMS, it is the same site as the app. That is one reason the CSRF token
   stays next to `SameSite=Strict`.
 

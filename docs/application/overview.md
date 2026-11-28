@@ -126,9 +126,10 @@ The response goes back up the same way: domain object ─▶ response mapper ─
   change every user of the realm.
 - `taldo.generation.retention` (default `PT32H`) and `taldo.generation.purge-interval` (default `PT1H`) control the
   generation clean-up.
-- Profiles: `local` (PostgreSQL from `docker-compose.yaml`, CORS for the Vite dev server on `localhost:5173`), `dev`
-  (datasource from `SPRING_DATASOURCE_*` environment variables; use `sslmode=verify-full` against a hosted database,
-  ADR 0007), `test` (in-memory H2). Spring Boot detects the driver and Hibernate the dialect.
+- Profiles: none in a hosted environment, where the base configuration reads the datasource from
+  `SPRING_DATASOURCE_*` and logs at `INFO` (see [deployment](deployment.md) for the image and a hosted database);
+  `local` (PostgreSQL from `docker-compose.yaml`, SQL logging, `DEBUG` logs, CORS for the Vite dev server on
+  `localhost:5173`); `test` (in-memory H2). Spring Boot detects the driver and Hibernate the dialect.
 - **Local stack** (`docker compose up`, no manual steps):
 
   | Service | Port | Role |
@@ -137,6 +138,7 @@ The response goes back up the same way: domain object ─▶ response mapper ─
   | `keycloak` | 8080 | Identity provider (ADR 0006), admin console with `admin`/`admin`. Realm `taldo` with clients `taldo-web` (confidential, the BFF), `taldo-dev` (public, local only) and `taldo-backend`, imported from `docker/keycloak/taldo-realm.json`. The backend calls its Admin API as `taldo-backend`. |
   | `keycloak-config` (one-shot) | – | Applies the realm settings the import cannot express (`docker/keycloak/configure-realm.sh`), including the token and session lifetimes from `KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS` (default 600), `KEYCLOAK_SSO_SESSION_IDLE_SECONDS` (default 86400) and `KEYCLOAK_SSO_SESSION_MAX_SECONDS` (default 129600). |
   | `mailpit` | 8025 | Catches the mails Keycloak sends; web UI on `http://localhost:8025`. |
+  | `taldo-api`, `taldo-bff` (profile `apps` only) | 8090, 8081 | The applications as their images, built from the jars in `target/` (`./mvnw package && docker compose --profile apps up --build`): a check of the images before they are pushed, see [deployment](deployment.md#running-the-images-locally). |
 
   Keycloak imports the realm on its first start only. After changing the realm file, delete the realm in the admin
   console and restart Keycloak, or reset everything with `docker compose down -v`. Its e-mail pattern must match
