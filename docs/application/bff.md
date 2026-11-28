@@ -9,7 +9,8 @@ This page covers login, the session, CSRF, logout and the relay of API calls to 
 ## Endpoints
 
 The frontend and the BFF share one origin (ADR 0009, section 3); the paths name neither the protocol nor the identity
-provider (section 2).
+provider (section 2). In a hosted environment the entry point (`docker/entry/`, see [deployment](deployment.md#entry-point))
+sends exactly these paths to the BFF; locally the Vite dev server does.
 
 | Path | What happens |
 |------|--------------|

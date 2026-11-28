@@ -76,7 +76,7 @@ changes the variables. Billed per mail; a test environment sends a handful.
 ### 8. Created by hand, following a runbook
 
 The resources (Project, Private Network, database, namespace, containers, domains, secrets) are created in the
-Scaleway console from a step-by-step page in `docs/`. Fastest to a working environment; the cost is that changes are not
+Scaleway console from a step-by-step page (`docs/runbook/scaleway-test-environment.md`). Fastest to a working environment; the cost is that changes are not
 recorded in code. Infrastructure as code (OpenTofu) is reconsidered for production.
 
 ## Alternatives considered
