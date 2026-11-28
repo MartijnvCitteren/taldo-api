@@ -19,7 +19,15 @@
 #   form without the box. It doesn't store the acceptance (Keycloak 26.8: that step's success() is empty); only the
 #   separate TERMS_AND_CONDITIONS required action after registration stores a terms_and_conditions attribute.
 # - The Taldo login theme, Dutch by default, when the server has it: started with docker-compose.theme.yaml, which
-#   mounts the theme JAR from taldo-web. Without it the realm keeps Keycloak's own theme.
+#   mounts the theme JAR from taldo-web, or built into the hosted image (docker/keycloak/Dockerfile). Without it the
+#   realm keeps Keycloak's own theme.
+#
+# The public client taldo-dev exists in the local realm only (ADR 0009, section 6): it is created from
+# KEYCLOAK_DEV_CLIENT_FILE, which only docker-compose.yaml sets. The realm file every environment imports has no public
+# client, so an environment that forgets a setting never gets one.
+#
+# Runs as a one-shot container in docker-compose.yaml and inside the hosted image (start-hosted.sh), which sets
+# KEYCLOAK_ADMIN_URL to Keycloak in the same container.
 set -euo pipefail
 
 readonly REALM=taldo
@@ -29,7 +37,7 @@ kcadm() {
   /opt/keycloak/bin/kcadm.sh "$@" --config "$CONFIG"
 }
 
-kcadm config credentials --server http://keycloak:8080 --realm master \
+kcadm config credentials --server "${KEYCLOAK_ADMIN_URL:-http://keycloak:8080}" --realm master \
   --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD"
 
 default_account_roles=$(kcadm get-roles -r "$REALM" --rname "default-roles-$REALM" --cclientid account)
@@ -54,6 +62,10 @@ if kcadm get serverinfo | grep -q '"name" : "taldo"'; then
     -s 'supportedLocales=["nl","en"]' -s defaultLocale=nl
 else
   echo "Taldo login theme not installed; keeping Keycloak's theme"
+fi
+
+if [[ -n "${KEYCLOAK_DEV_CLIENT_FILE:-}" ]] && [[ "$(kcadm get clients -r "$REALM" -q clientId=taldo-dev --fields id)" != *'"id"'* ]]; then
+  kcadm create clients -r "$REALM" -f "$KEYCLOAK_DEV_CLIENT_FILE"
 fi
 
 echo "Realm $REALM configured"

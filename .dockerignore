@@ -1,6 +1,10 @@
-# The build context of docker/java/Dockerfile is the repository root. Send only what the image needs, so sources,
-# local secrets (.env) and the rest of target/ never reach the Docker daemon.
+# The build context of the images (docker/java/Dockerfile, docker/keycloak/Dockerfile) is the repository root. Send
+# only what they need, so sources, local secrets (.env) and the rest of target/ never reach the Docker daemon.
 *
 !docker/java/
+!docker/keycloak/Dockerfile
+!docker/keycloak/taldo-realm.json
+!docker/keycloak/configure-realm.sh
+!docker/keycloak/start-hosted.sh
 !taldo-api/target/taldo-api-*.jar
 !taldo-bff/target/taldo-bff-*.jar

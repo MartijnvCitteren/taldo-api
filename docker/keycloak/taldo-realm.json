@@ -20,10 +20,14 @@
   "organizationsEnabled": true,
   "passwordPolicy": "length(12) and maxLength(128) and notEmail(undefined)",
   "smtpServer": {
-    "host": "mailpit",
-    "port": "1025",
-    "from": "no-reply@taldo.local",
-    "fromDisplayName": "Taldo"
+    "host": "${KEYCLOAK_SMTP_HOST:mailpit}",
+    "port": "${KEYCLOAK_SMTP_PORT:1025}",
+    "from": "${KEYCLOAK_SMTP_FROM:no-reply@taldo.local}",
+    "fromDisplayName": "Taldo",
+    "starttls": "${KEYCLOAK_SMTP_STARTTLS:false}",
+    "auth": "${KEYCLOAK_SMTP_AUTH:false}",
+    "user": "${KEYCLOAK_SMTP_USER:}",
+    "password": "${KEYCLOAK_SMTP_PASSWORD:}"
   },
   "localizationTexts": {
     "en": {
@@ -44,57 +48,12 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "http://localhost:5173/login/callback"
+        "${TALDO_WEB_BASE_URL:http://localhost:5173}/login/callback"
       ],
       "webOrigins": [],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5173/",
-        "client.use.lightweight.access.token.enabled": "true"
-      },
-      "protocolMappers": [
-        {
-          "name": "subject",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-sub-mapper",
-          "config": {
-            "access.token.claim": "true",
-            "introspection.token.claim": "true",
-            "lightweight.claim": "true"
-          }
-        },
-        {
-          "name": "audience taldo-api",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-mapper",
-          "config": {
-            "included.custom.audience": "taldo-api",
-            "access.token.claim": "true",
-            "id.token.claim": "false",
-            "introspection.token.claim": "true",
-            "lightweight.claim": "true"
-          }
-        }
-      ]
-    },
-    {
-      "clientId": "taldo-dev",
-      "name": "Taldo local development (public client, local realm only)",
-      "enabled": true,
-      "publicClient": true,
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false,
-      "redirectUris": [
-        "http://localhost:5173/*"
-      ],
-      "webOrigins": [
-        "http://localhost:5173"
-      ],
-      "attributes": {
-        "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5173/*",
+        "post.logout.redirect.uris": "${TALDO_WEB_BASE_URL:http://localhost:5173}/",
         "client.use.lightweight.access.token.enabled": "true"
       },
       "protocolMappers": [

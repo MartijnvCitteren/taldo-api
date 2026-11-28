@@ -1,13 +1,16 @@
 package eu.taldo.api.adapter.out.keycloak;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
@@ -23,10 +26,14 @@ import tools.jackson.databind.json.JsonMapper;
  * subject and the API's audience. Names and the e-mail address stay out. Without its own mapper the
  * lightweight token has no {@code sub} at all, and without the audience the backend rejects every
  * token.
+ *
+ * <p>{@code taldo-dev} is in its own file, which only the local Docker Compose setup adds to the
+ * realm (ADR 0009, section 6): the realm file every environment imports holds no public client.
  */
 class KeycloakRealmAccessTokenTest {
 
   private static final Path REALM_FILE = Path.of("../docker/keycloak/taldo-realm.json");
+  private static final Path DEV_CLIENT_FILE = Path.of("../docker/keycloak/taldo-dev-client.json");
   private static final String AUDIENCES_PROPERTY =
       "spring.security.oauth2.resourceserver.jwt.audiences";
   private static final JsonMapper JSON_MAPPER = JsonMapper.builder().build();
@@ -72,12 +79,28 @@ class KeycloakRealmAccessTokenTest {
         audienceMapper.path("config").path("included.custom.audience").asString());
   }
 
+  @Test
+  @DisplayName(
+      "given the realm every environment imports, when its clients are read then none is a public"
+          + " client")
+  void givenTheImportedRealmWhenItsClientsAreReadThenNoneIsAPublicClient() throws IOException {
+    var publicClients =
+        realmClients().filter(client -> client.path("publicClient").asBoolean()).toList();
+
+    assertTrue(publicClients.isEmpty(), "Public clients in " + REALM_FILE + ": " + publicClients);
+  }
+
   private static JsonNode loginClient(String clientId) throws IOException {
-    var realm = JSON_MAPPER.readTree(Files.readString(REALM_FILE));
-    return StreamSupport.stream(realm.path("clients").spliterator(), false)
+    var devClient = JSON_MAPPER.readTree(Files.readString(DEV_CLIENT_FILE));
+    return Stream.concat(realmClients(), Stream.of(devClient))
         .filter(client -> clientId.equals(client.path("clientId").asString()))
         .findFirst()
-        .orElseThrow(() -> new IllegalStateException("The realm has no client " + clientId));
+        .orElseThrow(() -> new IllegalStateException("No client " + clientId));
+  }
+
+  private static Stream<JsonNode> realmClients() throws IOException {
+    var realm = JSON_MAPPER.readTree(Files.readString(REALM_FILE));
+    return StreamSupport.stream(realm.path("clients").spliterator(), false);
   }
 
   /** The client's mapper of the given type, which must put its claim in the lightweight token. */

@@ -92,7 +92,9 @@ Locally: `docker compose up`, then run `taldo-bff` with the `local` profile. The
   only the subject.
 - `taldo-dev` is a public client in the **local** realm only, with the settings `taldo-web` had before: the current
   frontend logs in with it (`keycloak-js`, `clientId: taldo-dev`) until it switches to the BFF, and developers use it to
-  get a token for Postman. `KeycloakRealmAccessTokenTest` checks both clients' tokens.
+  get a token for Postman. It is not in the realm file every environment imports: `keycloak-config` creates it from
+  `docker/keycloak/taldo-dev-client.json`, which only Docker Compose provides. `KeycloakRealmAccessTokenTest` checks
+  both clients' tokens and that the imported realm holds no public client.
 
 ## Testing
 
