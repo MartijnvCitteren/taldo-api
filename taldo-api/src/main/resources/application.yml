@@ -8,10 +8,17 @@ spring:
   profiles:
     default: ${SPRING_PROFILES_ACTIVE:default}
 
+  # PostgreSQL (ADR 0007). Against a hosted database: jdbc:postgresql://<host>:5432/taldo_db?sslmode=verify-full
+  # (docs/application/deployment.md). Spring Boot picks the driver from the URL and Hibernate the dialect from the
+  # database.
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
 
   # @Async work (AI description generation) and the web server run on virtual threads.
   threads:
@@ -92,6 +99,6 @@ taldo:
 
 logging:
   level:
-    eu.taldo: ${LOGGING_LEVEL_APP:DEBUG}
+    eu.taldo: ${LOGGING_LEVEL_APP:INFO}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

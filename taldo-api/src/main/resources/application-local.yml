@@ -4,6 +4,8 @@ spring:
     url: jdbc:postgresql://localhost:5433/taldo_db
     username: postgres
     password: Super_secret-123
+  jpa:
+    show-sql: true
   security:
     oauth2:
       client:

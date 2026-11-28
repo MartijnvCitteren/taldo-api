@@ -160,6 +160,16 @@
 					<groupId>org.springframework.boot</groupId>
 					<artifactId>spring-boot-maven-plugin</artifactId>
 					<version>${spring-boot.version}</version>
+					<!-- Makes the jar of an application module runnable (java -jar), as the container image
+					     needs. spring-boot-starter-parent binds this goal; this reactor does not use that parent. -->
+					<executions>
+						<execution>
+							<id>repackage</id>
+							<goals>
+								<goal>repackage</goal>
+							</goals>
+						</execution>
+					</executions>
 				</plugin>
 				<plugin>
 					<groupId>com.diffplug.spotless</groupId>
