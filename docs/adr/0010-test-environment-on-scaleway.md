@@ -66,7 +66,14 @@ The same image runs in test and later in production; profiles are not used to te
 (`docs/application/deployment.md`). Secrets are secret environment variables of the container. The application holds
 no Scaleway-specific code or configuration: the CAs and addresses come in through generic variables.
 
-### 7. Created by hand, following a runbook
+### 7. Mail through Scaleway Transactional Email
+
+Keycloak sends the verification and password-reset mails through Scaleway Transactional Email over plain SMTP with
+STARTTLS (`KEYCLOAK_SMTP_*`, `docs/application/deployment.md`), from an address under `test.taldo.eu`, whose DNS gets the
+records Scaleway asks for to verify the domain. SMTP keeps Keycloak free of any provider API: another mail service only
+changes the variables. Billed per mail; a test environment sends a handful.
+
+### 8. Created by hand, following a runbook
 
 The resources (Project, Private Network, database, namespace, containers, domains, secrets) are created in the
 Scaleway console from a step-by-step page in `docs/`. Fastest to a working environment; the cost is that changes are not
@@ -92,8 +99,12 @@ recorded in code. Infrastructure as code (OpenTofu) is reconsidered for producti
   monthly free tier of 200k vCPU-seconds and 400k GB-seconds; with occasional use of test that is a few euros at most.
 - **Cold starts.** After a quiet period the first request starts the containers it needs: taldo-api started in about
   5 seconds in a local check of its image, Keycloak takes tens of seconds.
-- **The BFF needs Keycloak when it starts**: it reads the issuer's discovery document at startup. A BFF that starts
-  while Keycloak is still starting fails its own start. To be solved when Keycloak is deployed.
+- **The BFF needs Keycloak when it starts**: it reads the issuer's discovery document at startup, with a 30-second
+  connect and read timeout (Spring Security's `ClientRegistrations`). When Keycloak has scaled to zero, that request
+  itself starts it; Keycloak's image started in about 11 seconds in a local check, plus the creation of its schema on
+  the very first start. This holds only if the platform keeps a request waiting while it starts a container, which is
+  checked when the environment is set up. If it does not, the BFF fails its start until Keycloak runs; the fallback is
+  a minimum of one Keycloak instance (the alternative "Keycloak always on").
 - **Work outside requests.** The scheduled clean-up of generations runs only while a taldo-api instance runs. A
   description generation runs after the request that started it; the frontend polls for its result, which keeps the
   instance busy until it is done.
