@@ -70,12 +70,14 @@ points at taldo-api's private address.
 ## Keycloak
 
 `docker/keycloak/Dockerfile` builds Keycloak for a hosted environment; local development keeps the stock image in
-development mode. Build from the repository root, optionally with the Taldo login theme from taldo-web:
+development mode. The Taldo login theme is always included: build it in taldo-web first
+(`npm run build-keycloak-theme`), then build from the repository root. Without the named build context
+`taldo-keycloak-theme` (or without the JAR in it) the build fails, so a hosted environment never shows Keycloak's own
+login pages.
 
 ```
-docker build --platform linux/amd64 -f docker/keycloak/Dockerfile -t taldo-keycloak .
 docker build --platform linux/amd64 -f docker/keycloak/Dockerfile \
-  --build-context theme=../taldo-web/dist_keycloak -t taldo-keycloak .
+  --build-context taldo-keycloak-theme=../taldo-web/dist_keycloak -t taldo-keycloak .
 ```
 
 - **Optimized build** (`kc.sh build`) with the options that cannot change at runtime: PostgreSQL, health endpoints and
@@ -89,7 +91,7 @@ docker build --platform linux/amd64 -f docker/keycloak/Dockerfile \
   Keycloak is stopped and the container exits: a realm without those settings lets users edit their verified name.
 - **The realm** is the same file as locally. Its environment-specific values are placeholders whose defaults are the
   local ones; like the rest of the realm, they are read on the first start only. Change them later in the admin console
-  or by importing the realm again. The public client `taldo-dev` is not in it (ADR 0009, section 6).
+  or by importing the realm again. The public client `taldo-test` is not in it (ADR 0009, section 6).
 
 | Variable | Notes |
 |----------|-------|
@@ -103,7 +105,7 @@ docker build --platform linux/amd64 -f docker/keycloak/Dockerfile \
 | `KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS`, `KEYCLOAK_SSO_SESSION_IDLE_SECONDS`, `KEYCLOAK_SSO_SESSION_MAX_SECONDS` | Required; local values 600, 86400, 129600 (ADR 0006, revision 2026-11-21). |
 
 Verified locally with the image against a PostgreSQL that accepts TLS only, signed by a private CA: Keycloak starts,
-imports and configures the realm (theme, required actions, lifetimes; no `taldo-dev`; `taldo-web` with the given
+imports and configures the realm (theme, required actions, lifetimes; no `taldo-test`; `taldo-web` with the given
 redirect URIs), still reaches a public HTTPS endpoint, sends mail through the configured server, and stops in about a
 second on `SIGTERM`. Without the CA it does not start (`PKIX path building failed`); with a lifetime missing,
 `configure-realm.sh` fails and the container stops.

@@ -146,6 +146,10 @@ server only, rotation adds less than it does in a browser.
   logging in with `keycloak-js` by changing only its `clientId`, until it switches to the BFF. No other environment
   exists yet, so no production realm ever has a public client.
 
+*Revised 2026-11-28 (maintainer decision):* the local public client is renamed `taldo-test`; it is still local only.
+It is no longer part of the realm file every environment imports: the local `keycloak-config` service creates it from
+`docker/keycloak/taldo-test-client.json` (`docs/application/bff.md`).
+
 ## Consequences
 
 - **Frontend:** `keycloak-js` goes. "Am I logged in?" becomes `GET /api/v1/me`; a `401` sends the browser to `/login`.

@@ -20,26 +20,26 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Guards what the realm puts in the access tokens of the clients users log in with: {@code
- * taldo-web}, the BFF's confidential client (ADR 0009), and {@code taldo-dev}, the public client
+ * taldo-web}, the BFF's confidential client (ADR 0009), and {@code taldo-test}, the public client
  * for local development (ADR 0006, revision 2026-11-21, points 2 and 3). Both use Keycloak's
  * lightweight access token, which only carries claims from mappers marked as lightweight: the
  * subject and the API's audience. Names and the e-mail address stay out. Without its own mapper the
  * lightweight token has no {@code sub} at all, and without the audience the backend rejects every
  * token.
  *
- * <p>{@code taldo-dev} is in its own file, which only the local Docker Compose setup adds to the
+ * <p>{@code taldo-test} is in its own file, which only the local Docker Compose setup adds to the
  * realm (ADR 0009, section 6): the realm file every environment imports holds no public client.
  */
 class KeycloakRealmAccessTokenTest {
 
   private static final Path REALM_FILE = Path.of("../docker/keycloak/taldo-realm.json");
-  private static final Path DEV_CLIENT_FILE = Path.of("../docker/keycloak/taldo-dev-client.json");
+  private static final Path TEST_CLIENT_FILE = Path.of("../docker/keycloak/taldo-test-client.json");
   private static final String AUDIENCES_PROPERTY =
       "spring.security.oauth2.resourceserver.jwt.audiences";
   private static final JsonMapper JSON_MAPPER = JsonMapper.builder().build();
 
   @ParameterizedTest
-  @ValueSource(strings = {"taldo-web", "taldo-dev"})
+  @ValueSource(strings = {"taldo-web", "taldo-test"})
   @DisplayName(
       "given a client users log in with, when its access token is configured then it is a"
           + " lightweight token")
@@ -53,7 +53,7 @@ class KeycloakRealmAccessTokenTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"taldo-web", "taldo-dev"})
+  @ValueSource(strings = {"taldo-web", "taldo-test"})
   @DisplayName(
       "given a client users log in with, when its access token is configured then the subject is"
           + " in the lightweight token")
@@ -65,7 +65,7 @@ class KeycloakRealmAccessTokenTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"taldo-web", "taldo-dev"})
+  @ValueSource(strings = {"taldo-web", "taldo-test"})
   @DisplayName(
       "given a client users log in with, when its access token is configured then its audience is"
           + " the one the backend accepts")
@@ -91,8 +91,8 @@ class KeycloakRealmAccessTokenTest {
   }
 
   private static JsonNode loginClient(String clientId) throws IOException {
-    var devClient = JSON_MAPPER.readTree(Files.readString(DEV_CLIENT_FILE));
-    return Stream.concat(realmClients(), Stream.of(devClient))
+    var testClient = JSON_MAPPER.readTree(Files.readString(TEST_CLIENT_FILE));
+    return Stream.concat(realmClients(), Stream.of(testClient))
         .filter(client -> clientId.equals(client.path("clientId").asString()))
         .findFirst()
         .orElseThrow(() -> new IllegalStateException("No client " + clientId));

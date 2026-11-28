@@ -1,5 +1,5 @@
 {
-  "clientId": "taldo-dev",
+  "clientId": "taldo-test",
   "name": "Taldo local development (public client, local realm only)",
   "enabled": true,
   "publicClient": true,

@@ -19,11 +19,11 @@
 #   form without the box. It doesn't store the acceptance (Keycloak 26.8: that step's success() is empty); only the
 #   separate TERMS_AND_CONDITIONS required action after registration stores a terms_and_conditions attribute.
 # - The Taldo login theme, Dutch by default, when the server has it: started with docker-compose.theme.yaml, which
-#   mounts the theme JAR from taldo-web, or built into the hosted image (docker/keycloak/Dockerfile). Without it the
-#   realm keeps Keycloak's own theme.
+#   mounts the theme JAR from taldo-web, and always in the hosted image (docker/keycloak/Dockerfile). Without it
+#   (locally) the realm keeps Keycloak's own theme.
 #
-# The public client taldo-dev exists in the local realm only (ADR 0009, section 6): it is created from
-# KEYCLOAK_DEV_CLIENT_FILE, which only docker-compose.yaml sets. The realm file every environment imports has no public
+# The public client taldo-test exists in the local realm only (ADR 0009, section 6): it is created from
+# KEYCLOAK_TEST_CLIENT_FILE, which only docker-compose.yaml sets. The realm file every environment imports has no public
 # client, so an environment that forgets a setting never gets one.
 #
 # Runs as a one-shot container in docker-compose.yaml and inside the hosted image (start-hosted.sh), which sets
@@ -64,8 +64,8 @@ else
   echo "Taldo login theme not installed; keeping Keycloak's theme"
 fi
 
-if [[ -n "${KEYCLOAK_DEV_CLIENT_FILE:-}" ]] && [[ "$(kcadm get clients -r "$REALM" -q clientId=taldo-dev --fields id)" != *'"id"'* ]]; then
-  kcadm create clients -r "$REALM" -f "$KEYCLOAK_DEV_CLIENT_FILE"
+if [[ -n "${KEYCLOAK_TEST_CLIENT_FILE:-}" ]] && [[ "$(kcadm get clients -r "$REALM" -q clientId=taldo-test --fields id)" != *'"id"'* ]]; then
+  kcadm create clients -r "$REALM" -f "$KEYCLOAK_TEST_CLIENT_FILE"
 fi
 
 echo "Realm $REALM configured"
