@@ -23,10 +23,10 @@ import java.util.Map;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * A WireMock stand-in for Keycloak's realm: the discovery document, the signing key and the token
- * endpoint. One server for the whole test run, so cached Spring contexts keep pointing at its port.
- * It serves the realm from the start, because the application reads the discovery document when its
- * context starts. Tests reset it and serve the realm again before use.
+ * A WireMock stand-in for Keycloak's realm: the discovery document, the signing key, the token
+ * endpoint and the UserInfo endpoint. One server for the whole test run, so cached Spring contexts
+ * keep pointing at its port. It serves the realm from the start, because the application reads the
+ * discovery document when its context starts. Tests reset it and serve the realm again before use.
  */
 final class KeycloakStub {
   static final String SUBJECT = "6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b";
@@ -35,6 +35,7 @@ final class KeycloakStub {
   static final String AUTHORIZATION_PATH = REALM_PATH + "/protocol/openid-connect/auth";
   static final String TOKEN_PATH = REALM_PATH + "/protocol/openid-connect/token";
   static final String END_SESSION_PATH = REALM_PATH + "/protocol/openid-connect/logout";
+  private static final String USERINFO_PATH = REALM_PATH + "/protocol/openid-connect/userinfo";
   private static final String CERTS_PATH = REALM_PATH + "/protocol/openid-connect/certs";
   private static final JsonMapper JSON_MAPPER = JsonMapper.builder().build();
   private static final RSAKey REALM_KEY = generateKey();
@@ -53,7 +54,10 @@ final class KeycloakStub {
     return KEYCLOAK_WIREMOCK.baseUrl() + REALM_PATH;
   }
 
-  /** Serves the discovery document and the realm's public key. */
+  /**
+   * Serves the discovery document, the realm's public key and a UserInfo endpoint that refuses
+   * {@code taldo-web}'s lightweight access token, as Keycloak does.
+   */
   static void stubRealm() {
     KEYCLOAK_WIREMOCK.stubFor(
         get(REALM_PATH + "/.well-known/openid-configuration").willReturn(json(discovery())));
@@ -63,11 +67,22 @@ final class KeycloakStub {
                 aResponse()
                     .withHeader("Content-Type", "application/json")
                     .withBody(new JWKSet(REALM_KEY.toPublicJWK()).toString())));
+    KEYCLOAK_WIREMOCK.stubFor(
+        get(USERINFO_PATH)
+            .willReturn(
+                aResponse()
+                    .withStatus(401)
+                    .withHeader(
+                        "WWW-Authenticate",
+                        "Bearer realm=\"taldo\", error=\"invalid_token\","
+                            + " error_description=\"Lightweight access token not allowed for"
+                            + " userinfo endpoint\"")));
   }
 
   /**
    * Lets the token endpoint exchange any code for an access token, valid for the given number of
-   * seconds, and an ID token carrying the nonce of the login it belongs to.
+   * seconds, and an ID token carrying the nonce of the login it belongs to. The scope is what
+   * Keycloak grants with the realm's default client scopes.
    */
   static void stubTokenEndpoint(String nonce, String accessToken, int expiresInSeconds) {
     KEYCLOAK_WIREMOCK.stubFor(
@@ -87,7 +102,7 @@ final class KeycloakStub {
                         "expires_in",
                         expiresInSeconds,
                         "scope",
-                        "openid"))));
+                        "openid profile email"))));
   }
 
   /** Lets the token endpoint renew the tokens with the refresh token. */
@@ -171,6 +186,8 @@ final class KeycloakStub {
         KEYCLOAK_WIREMOCK.baseUrl() + CERTS_PATH,
         "end_session_endpoint",
         KEYCLOAK_WIREMOCK.baseUrl() + END_SESSION_PATH,
+        "userinfo_endpoint",
+        KEYCLOAK_WIREMOCK.baseUrl() + USERINFO_PATH,
         "response_types_supported",
         List.of("code"),
         "subject_types_supported",

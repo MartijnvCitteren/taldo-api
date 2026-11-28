@@ -87,7 +87,9 @@ Locally: `docker compose up`, then run `taldo-bff` with the `local` profile. The
 ## Keycloak clients
 
 - `taldo-web` is confidential since the BFF (secret `TALDO_WEB_CLIENT_SECRET` in Docker Compose), with the lightweight
-  access token, the `sub` mapper and the `taldo-api` audience.
+  access token, the `sub` mapper and the `taldo-api` audience. Keycloak refuses a lightweight token at its UserInfo
+  endpoint, so the BFF builds the user from the ID token alone and never calls UserInfo (`SecurityConfig`): it needs
+  only the subject.
 - `taldo-dev` is a public client in the **local** realm only, with the settings `taldo-web` had before: the current
   frontend logs in with it (`keycloak-js`, `clientId: taldo-dev`) until it switches to the BFF, and developers use it to
   get a token for Postman. `KeycloakRealmAccessTokenTest` checks both clients' tokens.
@@ -95,7 +97,8 @@ Locally: `docker compose up`, then run `taldo-bff` with the `local` profile. The
 ## Testing
 
 `LoginIntegrationTest` runs the whole login over HTTP against a WireMock Keycloak (`KeycloakStub`: discovery, keys,
-token endpoint; the ID token carries the nonce of the login it belongs to): the authorization request (client, PKCE,
+token endpoint with Keycloak's default scopes, and a UserInfo endpoint that refuses the token as Keycloak does; the ID
+token carries the nonce of the login it belongs to): the authorization request (client, PKCE,
 callback, cookie attributes), the code exchange (client secret and PKCE verifier), a callback with a foreign `state`,
 `401` without a session, logout with and without the CSRF token. `ApiRelayIntegrationTest` replaces taldo-api with
 WireMock too: what taldo-api receives (path, query, bearer token, body; no cookies or CSRF header), the relative
@@ -109,9 +112,9 @@ session gone), Keycloak unavailable (`503`, session kept) and taldo-api unreacha
   package `@NullMarked`), SpotBugs, Spotless and the Enforcer do run.
 - The compiler configuration (Error Prone, NullAway) is a copy of taldo-api's; moving it to the parent POM would keep
   both in step.
-- Whether browsers accept a `__Host-` cookie over `http://localhost` is untested; if not, set `TALDO_SESSION_COOKIE_NAME`
-  locally.
-- Not run end to end against a real Keycloak and the frontend yet: that comes with the frontend's switch to the BFF.
+- No automated end-to-end test against a real Keycloak: `KeycloakStub` must mirror Keycloak's behaviour by hand.
+  Checked by hand in Chrome through the Vite dev server (login, relay, logout); Chrome accepts the `__Host-` cookie
+  over `http://localhost`. Other browsers are untested; if one refuses it, set `TALDO_SESSION_COOKIE_NAME` locally.
 - Refresh-token rotation is off in the realm (ADR 0009, section 5). Two parallel calls that both renew the token use
   the same refresh token; with rotation on, the second would fail and end the session.
 - taldo-api's CORS configuration is still there; it can go once no browser calls taldo-api directly.

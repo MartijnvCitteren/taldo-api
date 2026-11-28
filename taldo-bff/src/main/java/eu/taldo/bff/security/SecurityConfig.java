@@ -6,9 +6,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
@@ -53,6 +57,19 @@ public class SecurityConfig {
   @Bean
   OAuth2AuthorizedClientRepository authorizedClientRepository() {
     return new HttpSessionOAuth2AuthorizedClientRepository();
+  }
+
+  /**
+   * Builds the user from the ID token alone, without calling Keycloak's UserInfo endpoint. {@code
+   * taldo-web}'s access token is a lightweight token (ADR 0009), which Keycloak refuses at that
+   * endpoint, so with Spring Security's default every login would fail. The BFF needs only the
+   * subject, which the ID token carries.
+   */
+  @Bean
+  OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
+    var userService = new OidcUserService();
+    userService.setRetrieveUserInfo(userRequest -> false);
+    return userService;
   }
 
   @Bean
